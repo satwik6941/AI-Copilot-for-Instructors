@@ -7,7 +7,7 @@ websearcheragent = LlmAgent(
     model="gemini-2.0-flash",
     name="WebSearcherAgent",
     description="Provide the information about textbooks based on the user's query.",
-    instruction = f"""
+    instruction=f"""
 You are a highly skilled and experienced web research specialist with 20+ years of expertise in information retrieval across all domains and industries.
 
 **Your Primary Role:**
@@ -46,10 +46,8 @@ You are a highly skilled and experienced web research specialist with 20+ years 
 
 Your goal is to be the most reliable and comprehensive web research assistant, capable of finding quality information on absolutely any topic the user requests.
 """,
-
     generate_content_config=types.GenerateContentConfig(
         temperature=0.2, 
-        max_output_tokens=1000
     ),
     include_contents='default',
     planner=PlanReActPlanner(),
@@ -57,9 +55,9 @@ Your goal is to be the most reliable and comprehensive web research assistant, c
 )
 
 blogsearchagent = LlmAgent(
+    model="gemini-2.0-flash",
     name="BlogSearchAgent",
     description="Specialized agent that searches and analyzes blog content from companies, news sites, and popular blogging platforms across all domains.",
-    model="gemini-2.0-flash",
     instruction=f"""
 You are an expert blog content researcher and analyst with 20+ years of experience in discovering, analyzing, and synthesizing information from blog posts across all industries and domains.
 
@@ -140,7 +138,6 @@ Your goal is to be the definitive source for blog-based insights, trends, and ex
 """,
     generate_content_config=types.GenerateContentConfig(
         temperature=0.3,
-        max_output_tokens=1200
     ),
     include_contents='default',
     planner=PlanReActPlanner(),
@@ -148,10 +145,10 @@ Your goal is to be the definitive source for blog-based insights, trends, and ex
 )
 
 researchpapersagent = LlmAgent(
-    name = "ResearchPapersAgent",
-    description = 'Provides information about research papers and summarizes them based on the user\'s query.',
-    model = "gemini-2.0-flash",
-    instruction = f'''
+    model="gemini-2.0-flash",
+    name="ResearchPapersAgent",
+    description='Provides information about research papers and summarizes them based on the user\'s query.',
+    instruction=f'''
 You are an expert in research papers with 20+ years of experience in discovering, analyzing, and synthesizing information from academic publications across all fields.
 
 **Your Primary Mission:**
@@ -222,22 +219,114 @@ You are an expert in research papers with 20+ years of experience in discovering
 - Prioritize recent research papers while including evergreen content when valuable
 
 Your goal is to be the definitive source for research-based insights, trends, and expert perspectives on any topic the user requests.
-'''
+''',
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.2,
+    ),
+    include_contents='default',
+    planner=PlanReActPlanner(),
+    tools=[google_search]
 )
 
-refinement_loop = LoopAgent(
-    name="RefinementLoop",
-    description = "Refines and improves the quality of the outputs of the agents by putting them in a loop",
-    sub_agents=[
-        SequentialAgent(
-            name = "ContentCreationPipeline",
-            sub_agents = [
-                websearcheragent,
-                blogsearchagent,
-                researchpapersagent
-            ],
-            description = "Pipeline that creates content by searching the web, blogs, and research papers in a sequential manner."
-        )
-    ],
-    max_iterations=5 
+refinement_loop_websearch = LoopAgent(
+    name="RefinementLoop_websearch",
+    description="Refines and improves the quality of the outputs of the agents by putting them in a loop",
+    sub_agents=[websearcheragent],
+    max_iterations=5,
 )
+
+refinement_loop_blog = LoopAgent(
+    name="RefinementLoop_blog",
+    description="Refines and improves the quality of the outputs of the agents by putting them in a loop",
+    sub_agents=[blogsearchagent],
+    max_iterations=5,
+)
+
+refinement_loop_research = LoopAgent(
+    name="RefinementLoop_research",
+    description="Refines and improves the quality of the outputs of the agents by putting them in a loop",
+    sub_agents=[researchpapersagent],
+    max_iterations=5,
+)
+
+reviewagent = LlmAgent(
+    model="gemini-2.0-flash",
+    name="ReviewAgent",
+    description="Receives final outputs from all three loop agents and transforms them into a simple, clear, and explanatory response for the user.",
+    instruction="""
+You are an expert content reviewer, synthesizer, and communicator with 25+ years of experience in transforming complex research findings into clear, accessible, and engaging content.
+
+**Your Primary Mission:**
+- Receive the FINAL outputs from three specialized research loop agents:
+  1. Web Search Loop Agent (general web information)
+  2. Blog Search Loop Agent (industry insights and expert opinions)  
+  3. Research Papers Loop Agent (academic and scientific findings)
+- Transform all findings into ONE comprehensive, simple, and explanatory response
+- Make complex information accessible to any user regardless of their expertise level
+
+**Your Teaching Style & Approach:**
+
+**Step 1: Create a Learning Roadmap**
+First start by creating a roadmap of the topics of what user wants according to his user query. Present this as a clear outline that shows the learning journey ahead.
+
+**Step 2: Organize with Sub-topics**
+Then divide it into sub topics in such a way that everything is well organised. Each sub-topic should build upon the previous one in a logical sequence.
+
+**Step 3: Explain Each Sub-topic with Structure**
+For each sub-topic, follow this exact pattern:
+- Start explaining each sub topic starting with a real life scenario
+- Explain its current limitations and challenges
+- Introduce the title of each concept which is being explained under that subtopic
+- Give some examples explaining the concepts under the subtopics to make the user understand better
+
+**Step 4: Maintain Flow Between Topics**
+After one subtopic is completed, then bring a connection between current sub topic and next sub topic such that the user does not miss the flow. Use transition sentences that link ideas naturally.
+
+**Step 5: Use Simple Language**
+Always use very simple terms to explain and also assume that you are teaching to a 5th grade student so that such a low age student also can understand complex topics and make great outcomes from the topic.
+
+**Additional Teaching Guidelines:**
+   - Highlight the most important takeaways
+   - Provide practical implications and real-world applications
+   - Include actionable insights where relevant
+   - Explain why the information matters to the user
+
+**Response Format (Always follow this structure):**
+**💡 WHAT THIS MEANS**
+Simple explanation of implications and significance
+
+**🚀 PRACTICAL APPLICATIONS**
+How this information can be used in real life
+
+**Quality Standards:**
+- Write at a level anyone can understand
+- Use conversational, friendly tone
+- Avoid unnecessary complexity
+- Focus on what matters most to the user
+- Make the response engaging and easy to read
+- Ensure every sentence adds value
+
+**Important:** You are receiving the FINAL, refined outputs from each loop agent after 5 iterations. Your job is to take these polished findings and make them even more accessible and useful for the end user.
+
+Your goal is to deliver the clearest, most useful, and most engaging response possible - one that transforms research complexity into user-friendly insights.
+""",
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.1,
+    ),
+    include_contents='default',
+    # planner=PlanReActPlanner(),
+)
+
+# Sequential pipeline that runs all loop agents (5 iterations each) and then synthesizes the results
+comprehensive_research_pipeline = SequentialAgent(
+    name="ComprehensiveResearchPipeline",
+    description="Complete research pipeline: runs 3 loop agents (5 iterations each), then passes their final outputs to review agent for synthesis and simplification.",
+    sub_agents=[
+        refinement_loop_websearch,      # Outputs final result after 5 iterations
+        refinement_loop_blog,           # Outputs final result after 5 iterations  
+        refinement_loop_research,       # Outputs final result after 5 iterations
+        reviewagent                     # Receives all 3 final outputs and creates simplified response
+    ]
+)
+
+root_agent = comprehensive_research_pipeline
