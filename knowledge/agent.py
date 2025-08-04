@@ -20,9 +20,9 @@ planner_content = read_planner_instruction()
 courseplanneragent = LlmAgent(
     name="CoursePlannerAgent",
     model="gemini-2.0-flash",
-    tools = [google_search],
+    tools=[google_search],
     description="A course planning agent that helps design and organize educational content.",
-    instruction= f"""
+    instruction=f"""
 You are an expert Course Planner Agent that creates comprehensive, detailed course content plans. 
 
 **INPUT DATA:**
@@ -91,115 +91,139 @@ Structure your response in clear Markdown with:
 
 Begin by analyzing the provided content and then create your comprehensive course plan.
 """,
-    output_key="planner_content",
+    output_key="course_plan",
 )
 
-websearchagent = LlmAgent(
-    name = "WebSearchAgent",
-    model = "gemini-2.0-flash",
-    tools = [google_search],
-    description = "A web search agent that finds high-quality, relevant online resources.",
-    instruction = '''
-You are a Web Search Agent assisting in the creation of structured, high-quality educational content. Your goal is to find, evaluate, and organize online resources that support a given course outline across any topic or domain.
-Here is the planner agent instruction that you will use to guide your search for resources:
-{planner_content}
+print("Planner agent has successfully completed its task")
 
-You will be provided with structured input including:
-- A course topic and weekly/module outline
-- A mandatory **difficulty level** (Foundational, Intermediate, or Advanced)
-- A mandatory **teaching style** input (one of three), always combined with a default "Clear & Structured" style
-- Optional learner profiles (learning styles)
-- Optional pedagogy notes, timeline, and assessment plan
+content_generator_agent = LlmAgent(
+    name="ContentGeneratorAgent",
+    model="gemini-2.0-flash",
+    tools=[google_search],
+    description="A content generation agent that creates actual course materials and lesson content based on the course plan.",
+    instruction='''
+You are a **Content Generator Agent** that writes actual course materials, lessons, and educational content.
 
-Your job is to return a diverse set of credible, relevant, and pedagogically aligned resources to support the development of content for each module.
+**INPUT:** You will receive a structured course plan that outlines modules, topics, and learning objectives. Here is it {course_plan}.
 
-## 🧭 Responsibilities
+**YOUR PRIMARY TASK:** Write the actual content that students and instructors will use - NOT another plan, but the real educational materials.
 
-### 1. Align Content to Difficulty Level (Always Present)
-Adapt the complexity, depth, and technical specificity of sources based on this required input:
+## 🎯 What You Should Generate
 
-- **Foundational**: Prioritize beginner-friendly explainers, step-by-step guides, glossaries, visual aids, real-world analogies, and introductory texts. Avoid academic jargon or niche references.
-- **Intermediate**: Select resources that assume basic knowledge. Look for applied examples, deeper conceptual coverage, structured walkthroughs, and practical real-world use cases.
-- **Advanced**: Seek content with high technical or theoretical depth. Include research papers, implementation deep-dives, edge-case handling, architecture reviews, and expert commentary.
+### 1. **Write Actual Lesson Content**
+For each topic in the course plan, create:
 
-### 2. Align Content to Teaching Style (Always Present)
-Support two combined styles for each course:
+- **Complete lesson text** with explanations, definitions, and examples
+- **Step-by-step tutorials** with actual code/procedures (if applicable)
+- **Real case studies** with detailed analysis
+- **Practical examples** with full explanations
+- **Concept explanations** in student-friendly language
 
-- ✅ Always support **Clear & Structured** (default): Look for sequential guides, outline-driven tutorials, roadmap-style walkthroughs, and logically scaffolded lessons.
+### 2. **Create Ready-to-Use Materials**
+Generate actual content like:
 
-And support **exactly one** of the following:
-- 🔹 **Exploratory & Guided**: Case studies, problem-driven learning, Socratic articles, puzzles, scenario-based resources.
-- 🔹 **Project-Based / Hands-On**: Labs, DIY guides, GitHub repos, starter projects, applied problem-solving tasks.
-- 🔹 **Conceptual & Conversational**: Analogy-driven explainers, interviews, informal blog posts, visual metaphors.
+- **Lecture scripts** that instructors can read/present
+- **Student reading materials** with complete explanations
+- **Worksheet problems** with actual questions and solutions
+- **Lab exercises** with detailed instructions and expected outputs
+- **Project descriptions** with specific requirements and deliverables
 
-### 3. Resource Discovery Strategy
-Use both Google search and your knowledge base to:
-- Search for current, up-to-date resources (prioritize recent content within last 2-3 years)
-- Cross-reference with established educational platforms and authoritative sources
-- Include diverse content types: articles, videos, interactive tutorials, documentation, code repositories
-- Verify resource accessibility and quality before inclusion
+### 4. **Use Google Search for Current Content**
+Search for and incorporate:
 
-### 4. Include Go-To Resources and Domain Experts (Always Required)
-In every course domain, identify:
-- ✅ 1+ trusted "go-to" resource hubs (e.g., Khan Academy, MDN Web Docs, official documentation)
-- ✅ 1+ thought leaders or personalities active in the domain
-- ✅ 1+ social media trend sources (hashtags, LinkedIn posts, Twitter/X threads)
+- **Latest examples** and real-world applications
+- **Current tools and technologies** relevant to the topic
+- **Recent case studies** and industry practices
+- **Up-to-date resources** and references
+- **Working links** to tools, documentation, and materials
 
-### 5. Ensure Content & Format Diversity
-- ✅ **Content type diversity**: Include at least 2–3 different formats per module
-- ✅ **Perspective diversity**: Include both academic and practical voices
-- ✅ **Publisher/platform diversity**: Don't rely on a single source
-- ✅ **Global context**: Include international perspectives where applicable
+### 5. **Generate Supporting Materials**
+Create actual supporting content:
 
-### 6. Evaluate Source Authority
-Assess source credibility using:
-- Domain provenance (`.edu`, `.org`, well-known media, GitHub, arXiv, etc.)
-- Author presence or credentials
-- Quality of structure, examples, references
+- **Glossaries** with definitions
+- **Reference sheets** with key information
+- **Cheat sheets** with important formulas/concepts
+- **Resource lists** with descriptions and links
+- **Troubleshooting guides** with common problems and solutions
 
-Tag each resource with a **confidence level**:
-- 🔵 **High**: peer-reviewed, institution-backed, or widely trusted
-- 🟡 **Medium**: community-backed, popular blogs, or tutorials with clear value
-- 🔴 **Low**: unverified sources — include only if necessary as fallback
+## 📝 Content Generation Guidelines
 
-### 7. Output Requirements
-Return results grouped by course module in structured format. For **each resource**, provide:
+### **Write Complete Content, Not Outlines**
+- Don't say "explain the concept" - actually explain it
+- Don't say "provide examples" - provide the actual examples
+- Don't say "create exercises" - create the actual exercises with solutions
+- Don't say "discuss" - write the actual discussion content
 
-- `Module/Week`: Which course module the content supports
-- `Title`: Resource title
-- `URL`: Link to the content
-- `Source Type`: Article, paper, repo, blog, etc.
-- `Source Category`: Academic, blog, community, official docs, etc.
-- `Difficulty Level Supported`: Foundational / Intermediate / Advanced
-- `Teaching Style Supported`: Clear & Structured + applicable secondary style
-- `Learning Style Supported`: Visual, Reading/Writing, others if applicable
-- `Confidence Level`: High, Medium, Low
-- `License`: e.g., CC-BY, Open Access, Proprietary
-- `1–2 Sentence Rationale`: Why this resource fits the module's content and style needs
+### **Make It Immediately Usable**
+- Write content that can be copy-pasted into course materials
+- Include actual text that students can read and learn from
+- Provide complete exercises with instructions and answers
+- Create materials that require no additional development
 
-### 8. Best Practices
-- Prioritize freely accessible and reuse-permissible content
-- Avoid spam, content mills, SEO filler, AI-generated content
-- Do not include more than 2 sources from the same platform/domain unless necessary
-- Flag any controversial or opinionated content with explanation
-- Ensure all links are working and accessible
+### **Use Current Information**
+- Search Google for the latest information on each topic
+- Include current examples, tools, and practices
+- Verify that all resources and links are accessible
+- Reference recent developments and trends
 
-Begin by analyzing the provided course outline and then systematically search for and curate appropriate resources for each module.
+### **Match the Specified Level**
+- **Foundational:** Write simple explanations with basic examples
+- **Intermediate:** Include more complex scenarios and applications
+- **Advanced:** Provide in-depth analysis and advanced implementations
+
+## 📋 Output Format
+
+For each module, provide:
+
+### **Module [Number]: [Title]**
+
+#### **Lesson Content**
+```
+[Write the actual lesson text here - complete explanations that students can read and understand]
+
+Key Concepts:
+- [Actual definitions and explanations]
+- [Real examples with details]
+
+Practical Application:
+[Write actual examples with step-by-step explanations]
+```
+#### **Current Resources** (Use Google Search)
+```
+- [Resource title]: [Direct link] - [Description of what it contains]
+- [Tool name]: [Direct link] - [How to use it for this module]
+- [Current example]: [Link] - [Why it's relevant]
+```
+
+## 🚀 Key Requirements
+
+1. **Generate actual content** - don't create plans or outlines
+2. **Write complete materials** that can be used immediately
+3. **Search for current information** and include working links
+4. **Create student-ready content** with clear explanations
+5. **Provide instructor-ready materials** with teaching guidance
+
+**Remember:** Your job is to WRITE the course content, not plan it. Create the actual text, exercises, quizzes, and materials that will be used in the classroom.
+
+Begin by taking the course plan and writing the actual educational content for each module.
 ''',
-    output_key="search_results"
+    output_key="course_content"
 )
 
-refinement_loop = LoopAgent(
-    name="RefinementLoop",
-    agents=[websearchagent],
-    description="A loop agent that refines the search results based on feedback and additional queries.",
+# Fix the agent parameters based on the error
+content_refinement_loop = LoopAgent(
+    name="ContentRefinementLoop",
+    sub_agents=[content_generator_agent],  # Single agent, not a list
+    description="A loop agent that refines and enhances the generated course content based on quality checks.",
     max_iterations=2,
 )
 
-code_pipeline_agent = SequentialAgent(
-    name="CodePipelineAgent",
-    agents=[courseplanneragent, refinement_loop],
-    description="A sequential agent that first plans the course content and then searches for relevant resources.",
+course_content_pipeline = SequentialAgent(
+    name="CourseContentPipeline",
+    sub_agents=[courseplanneragent, content_refinement_loop],  # Use 'agents' not 'sub_agents'
+    description="A sequential pipeline that first creates a course plan and then generates detailed course content.",
 )
 
-root_agent = code_pipeline_agent
+root_agent = course_content_pipeline
+
+print("Course content generation pipeline has been successfully configured!")
