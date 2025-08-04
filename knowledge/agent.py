@@ -52,7 +52,6 @@ Transform the above specifications into a highly detailed, actionable course con
      * Video content
      * Interactive tools
      * Documentation and guides
-   - **Assessment Methods:** Quizzes, projects, peer reviews
    - **Deliverables:** What students should produce/complete
 
 3. **Implementation Details:**
