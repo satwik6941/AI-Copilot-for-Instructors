@@ -212,7 +212,7 @@ Begin by taking the course plan and writing the actual educational content for e
 # Fix the agent parameters based on the error
 content_refinement_loop = LoopAgent(
     name="ContentRefinementLoop",
-    sub_agents=[content_generator_agent],  # Single agent, not a list
+    sub_agents=[content_generator_agent],
     description="A loop agent that refines and enhances the generated course content based on quality checks.",
     max_iterations=2,
 )
