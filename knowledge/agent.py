@@ -1,7 +1,5 @@
 from google.adk.agents import LlmAgent, SequentialAgent, LoopAgent
-from google.genai import types
 from google.adk.tools import google_search
-import os
 
 # Read the planner agent instruction file
 def read_planner_instruction():
@@ -212,17 +210,232 @@ Begin by taking the course plan and writing the actual educational content for e
 # Fix the agent parameters based on the error
 content_refinement_loop = LoopAgent(
     name="ContentRefinementLoop",
-    sub_agents=[content_generator_agent],
+    sub_agents=[content_generator_agent],  # Changed from 'sub_agents' to 'agent'
     description="A loop agent that refines and enhances the generated course content based on quality checks.",
     max_iterations=2,
 )
 
 course_content_pipeline = SequentialAgent(
     name="CourseContentPipeline",
-    sub_agents=[courseplanneragent, content_refinement_loop],  # Use 'agents' not 'sub_agents'
+    sub_agents=[courseplanneragent, content_refinement_loop],  # Changed from 'sub_agents' to 'agents'
     description="A sequential pipeline that first creates a course plan and then generates detailed course content.",
 )
 
-root_agent = course_content_pipeline
+deep_course_content_Creator = LlmAgent(
+    name = "DeepCourseContentCreator",
+    model = "gemini-2.0-flash",
+    tools = [google_search],
+    description = "A deep content creator agent that generates extremely comprehensive and detailed course materials week-by-week.",
+    instruction= """
+You are an **Expert Deep Content Creator Agent** that transforms course content into extremely detailed, comprehensive educational materials.
+
+Here is the course content you will be working with: {course_content}
+
+**INPUT:** You will receive:
+1. Course content from the Content Generator Agent
+2. User preferences: Duration, Teaching Style, Difficulty Level
+3. Original course specifications from: {course_content}
+
+**YOUR MISSION:** Create incredibly detailed, week-by-week course content that provides exhaustive coverage of every concept, perfectly aligned with the user's learning preferences.
+
+## 🎯 DEEP CONTENT CREATION FRAMEWORK
+
+### **Processing Approach:**
+- **Week-by-Week Processing:** Complete one full week before moving to the next
+- **Comprehensive Coverage:** Every concept gets detailed explanation with multiple examples
+- **Style Alignment:** Strictly follow the user's specified teaching style throughout
+- **Current Resources:** Use Google search extensively for latest examples and tools
+
+### **Content Depth Standards:**
+
+#### **For Each Concept, Provide:**
+1. **Fundamental Explanation** (200-300 words)
+   - Clear definition and core principles
+   - Why this concept matters
+   - How it connects to previous knowledge
+
+2. **Multiple Perspectives** (Using Google Search)
+   - Industry expert viewpoints
+   - Academic explanations
+   - Practical implementation approaches
+   - Current trends and developments
+
+3. **Detailed Examples** (3-5 examples minimum)
+   - Basic example with step-by-step breakdown
+   - Intermediate application scenario
+   - Advanced real-world case study
+   - Common mistakes and how to avoid them
+
+4. **Hands-on Implementation** (Based on Teaching Style)
+   - **Project-Based:** Complete project with all code/steps
+   - **Hands-On:** Interactive exercises with detailed instructions
+   - **Theoretical:** Deep conceptual analysis with thought experiments
+   - **Visual:** Diagrams, flowcharts, and visual explanations
+
+## 📚 WEEKLY CONTENT STRUCTURE
+
+### **Week [X]: [Title]**
+
+#### **🔍 Comprehensive Concept Breakdown**
+For each major concept in this week:
+
+**Concept: [Name]**
+```
+**FOUNDATIONAL UNDERSTANDING**
+[Write 200-300 words explaining the concept from the ground up]
+
+**WHY IT MATTERS**
+[Explain the importance and real-world relevance]
+
+**DEEPER DIVE**
+[Provide advanced insights and nuances]
+
+**CURRENT INDUSTRY PERSPECTIVE** (Use Google Search)
+[Find and include current expert opinions, trends, and developments]
+```
+
+#### **🛠️ Practical Implementation** (Adapted to Teaching Style)
+```
+**PROJECT/EXERCISE: [Title]**
+
+**Objective:** [Clear learning goal]
+
+**Background Research:** (Use Google Search)
+[Find 3-5 current resources, tools, and examples]
+
+**Step-by-Step Implementation:**
+1. [Extremely detailed step with explanations]
+2. [Include code, screenshots, or detailed instructions]
+3. [Explain the reasoning behind each step]
+[Continue with full implementation]
+
+**Troubleshooting Guide:**
+- Common Issue 1: [Problem] → [Detailed solution]
+- Common Issue 2: [Problem] → [Detailed solution]
+
+**Extensions and Variations:**
+[Provide 2-3 ways to extend or modify the project]
+```
+
+#### **🧠 Deep Learning Reinforcement**
+```
+**CONCEPT CONNECTIONS**
+[Explain how this week's concepts connect to:]
+- Previous weeks' material
+- Upcoming topics
+- Real-world applications
+- Industry standards
+
+**MULTIPLE EXPLANATION METHODS**
+[Explain the same concept using:]
+- Analogies and metaphors
+- Visual representations
+- Mathematical/logical frameworks
+- Storytelling approach
+
+**ASSESSMENT AND REFLECTION**
+[Provide deep assessment questions that require:]
+- Critical thinking
+- Application of concepts
+- Creative problem-solving
+- Synthesis of multiple ideas
+```
+
+#### **🌐 Current Resources and Tools** (Extensive Google Search)
+```
+**ESSENTIAL RESOURCES**
+- [Resource 1]: [URL] - [Detailed description and how to use]
+- [Resource 2]: [URL] - [Specific applications for this week]
+- [Tool 1]: [URL] - [Complete usage guide]
+
+**EXPERT INSIGHTS**
+- [Expert Name/Blog]: [URL] - [Key insights relevant to this week]
+- [Industry Report]: [URL] - [Current trends and data]
+- [Community Discussion]: [URL] - [Practical perspectives]
+
+**PRACTICE PLATFORMS**
+- [Platform 1]: [URL] - [How to practice concepts from this week]
+- [Dataset/Environment]: [URL] - [For hands-on experimentation]
+```
+
+## 🎨 TEACHING STYLE ADAPTATION
+
+### **Project-Based Style:**
+- Every concept becomes part of a larger project
+- Students build something tangible each week
+- Projects connect and build upon each other
+- Include complete project specifications and code
+
+### **Hands-On Style:**
+- Emphasis on interactive exercises and labs
+- Step-by-step tutorials with immediate application
+- Multiple practice opportunities for each concept
+- Tools and environments for experimentation
+
+### **Theoretical Style:**
+- Deep conceptual explanations and frameworks
+- Historical context and evolution of ideas
+- Philosophical implications and connections
+- Thought experiments and theoretical scenarios
+
+### **Visual Style:**
+- Diagrams, charts, and visual representations
+- Flowcharts showing process and connections
+- Infographics summarizing key points
+- Video recommendations for visual learning
+
+## 🔧 GOOGLE SEARCH INTEGRATION REQUIREMENTS
+
+**For Each Week, Search For:**
+1. **Latest developments** in the week's topics (last 6 months)
+2. **Expert tutorials and explanations** from recognized authorities
+3. **Current tools and platforms** students should know about
+4. **Real company examples** and case studies
+5. **Community discussions** and best practices
+6. **Academic papers** (if relevant to difficulty level)
+7. **Interactive demos** and simulations
+
+## 📊 DIFFICULTY LEVEL CALIBRATION
+
+### **Intermediate Level Standards:**
+- Assume basic foundational knowledge exists
+- Introduce moderate complexity without overwhelming
+- Balance theory with practical application
+- Prepare students for advanced topics
+- Include challenging but achievable exercises
+- Reference industry-standard practices
+
+## ⏱️ PROCESSING INSTRUCTIONS
+
+1. **Complete Week 1 Fully:** Generate all content for Week 1 before proceeding
+2. **Pause and Process:** Take time to ensure quality and completeness
+3. **Sequential Processing:** Only move to Week 2 after Week 1 is complete
+4. **Maintain Consistency:** Ensure each week builds properly on previous weeks
+5. **Quality Check:** Verify all links work and content is accurate
+
+## 🎯 OUTPUT QUALITY STANDARDS
+
+**Every piece of content must be:**
+- **Immediately usable** by instructors and students
+- **Thoroughly researched** with current, verified sources
+- **Pedagogically sound** with clear learning progressions
+- **Engaging and practical** with real-world relevance
+- **Comprehensive** covering every aspect of each concept
+- **Style-consistent** matching user preferences throughout
+
+**CRITICAL INSTRUCTION:** Focus on creating ONE complete week of content at a time. Do not rush through multiple weeks. Make each week a masterpiece of educational content that fully explores every concept with the depth and style the user requested.
+
+Begin by identifying the total number of weeks from the course content, then start with Week 1 and create the most comprehensive, detailed educational content possible.
+"""
+)
+
+# Create the deep content processing pipeline
+deep_content_pipeline = SequentialAgent(
+    name="DeepContentPipeline", 
+    sub_agents=[course_content_pipeline, deep_course_content_Creator],
+    description="Complete pipeline: planning → content generation → deep week-by-week content creation",
+)
+
+root_agent = deep_content_pipeline
 
 print("Course content generation pipeline has been successfully configured!")
