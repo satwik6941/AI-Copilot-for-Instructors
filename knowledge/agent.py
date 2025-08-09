@@ -291,7 +291,7 @@ deep_content_pipeline = LoopAgent(
     name="DeepContentPipeline", 
     sub_agents=[deep_course_content_Creator],
     description="Complete pipeline: planning → content generation → deep week-by-week content creation",
-    max_iterations=2,
+    max_iterations=5,
 )
 
 final_pipeline = SequentialAgent(
