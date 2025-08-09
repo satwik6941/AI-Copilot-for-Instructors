@@ -208,12 +208,12 @@ Begin by taking the course plan and writing the actual educational content for e
 )
 
 # Fix the agent parameters based on the error
-# content_refinement_loop = LoopAgent(
-#     name="ContentRefinementLoop",
-#     sub_agents=[content_generator_agent],  
-#     description="A loop agent that refines and enhances the generated course content based on quality checks.",
-#     max_iterations=2,
-# )
+content_refinement_loop = LoopAgent(
+    name="ContentRefinementLoop",
+    sub_agents=[content_generator_agent],  
+    description="A loop agent that refines and enhances the generated course content based on quality checks.",
+    max_iterations=2,
+)
 
 # course_content_pipeline = SequentialAgent(
 #     name="CourseContentPipeline",
@@ -296,7 +296,7 @@ deep_content_pipeline = LoopAgent(
 
 final_pipeline = SequentialAgent(
     name="FinalContentPipeline",
-    sub_agents=[courseplanneragnt, content_generator_agent, deep_content_pipeline],
+    sub_agents=[courseplanneragnt, content_refinement_loop, deep_content_pipeline],
     description="Final pipeline that combines course planning, content generation, and deep content creation.",
 )
 
