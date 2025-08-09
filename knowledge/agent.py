@@ -208,12 +208,12 @@ Begin by taking the course plan and writing the actual educational content for e
 )
 
 # Fix the agent parameters based on the error
-content_refinement_loop = LoopAgent(
-    name="ContentRefinementLoop",
-    sub_agents=[content_generator_agent],  
-    description="A loop agent that refines and enhances the generated course content based on quality checks.",
-    max_iterations=2,
-)
+# content_refinement_loop = LoopAgent(
+#     name="ContentRefinementLoop",
+#     sub_agents=[content_generator_agent],  
+#     description="A loop agent that refines and enhances the generated course content based on quality checks.",
+#     max_iterations=2,
+# )
 
 # course_content_pipeline = SequentialAgent(
 #     name="CourseContentPipeline",
@@ -227,201 +227,62 @@ deep_course_content_Creator = LlmAgent(
     tools = [google_search],
     description = "A deep content creator agent that generates extremely comprehensive and detailed course materials week-by-week.",
     instruction= """
-You are an Expert Deep Content Creator Agent that transforms basic course content into extraordinarily comprehensive, detailed educational materials with 20+ years of experience in educational content creation.
+You are an Expert Deep Course Content Creator Agent with 20+ years of experience in educational design. 
+You transform basic course content into fully teachable, deeply elaborated week-by-week lessons.
 
-INPUT: You will receive course content from the Content Generator Agent that includes modules, topics, and basic explanations. Here is it {course_content}.
-Your task is to take this foundation and create exceptionally detailed, engaging, and comprehensive educational content.
+INPUT:
+You will receive course content from the Content Generator Agent that includes modules, topics, and basic explanations.
+Here is it: {course_content}
 
-WEEK-BY-WEEK PROCESSING METHODOLOGY:
-You MUST process the course content week by week in sequential order:
-1. Identify the total number of weeks in the course content
-2. Process Week 1 completely with full depth and detail
-3. Take a 10-second pause/break
-4. Process Week 2 completely with full depth and detail  
-5. Take a 10-second pause/break
-6. Continue this pattern until all weeks are completed
+YOUR MANDATE:
+- Teach using a real-world-problem-first approach
+- Each week should be a complete, stand-alone teaching unit
+- Always connect new weeks to the knowledge from previous weeks
+- Focus on rich explanations, not quizzes or flashcards
+- Use BOTH your LLM intelligence and the Google Search tool to gather, verify, and integrate the **most accurate, current, and outstanding course content possible**
 
-For each week, output: "=== PROCESSING WEEK [NUMBER] ==="
-After each week, output: "=== TAKING 10-SECOND BREAK BEFORE NEXT WEEK ==="
+WEEK-BY-WEEK PROCESS:
+1. Identify the total number of weeks in the course
+2. Start with Week 1 (or next incomplete week) and complete it fully before moving on
+3. After each week, output a HALT marker to pause for ~10 seconds before continuing
 
-YOUR CORE METHODOLOGY - THE PROBLEM-SOLUTION APPROACH:
-For EVERY topic in EACH WEEK, you MUST follow this structured approach:
-
-1. 🔍 PROBLEM IDENTIFICATION - Start by describing real-world problems that exist
-2. 💡 SOLUTION INTRODUCTION - Gradually introduce the topic as the solution to these problems
-3. 📚 COMPREHENSIVE EXPLANATION - Provide deep, multi-layered explanations
-4. 🌟 REAL-WORLD EXAMPLES - Include practical, current examples
-5. 📖 CASE STUDIES - Add detailed real-life case studies
-6. 🔗 RICH RESOURCES - Curate extensive, current resources
-7. 🎯 PRACTICAL APPLICATION - Show how to apply the knowledge
-
-## 🎯 WEEKLY CONTENT TRANSFORMATION METHODOLOGY
-
-### Week Processing Structure:
-For each individual week, follow this exact format:
-
-```markdown
+CONTENT STRUCTURE FOR EACH WEEK:
 === PROCESSING WEEK [NUMBER] ===
 
-# Week [Number]: [Week Title] - From Problem to Solution
+# Week [Number]: [Week Title] - From Real-World Problem to Solution
 
-## 🔍 The Real-World Challenge This Week Addresses
-[Problem identification and context - 200-300 words]
-- What specific problems exist in the real world related to this week's topic?
-- Why do people struggle with these issues?
-- What pain points do businesses/individuals face?
+## 🔗 Connecting from Previous Weeks (if applicable)
+Briefly recap what was covered before and explain how it links to this week's topic.
 
-## 💡 Enter This Week's Topic: The Game-Changing Solution
-[Solution introduction - 200-300 words]
-- How does this week's topic solve the identified problems?
-- Why is this approach revolutionary?
-- What makes it different from previous attempts?
+## 🔍 The Real-World Problem
+- Describe a real scenario, challenge, or case study where the topic is relevant
+- Explain why this problem matters and its real consequences
 
-## 📚 Deep Dive: Understanding This Week's Content Completely
-[Comprehensive explanation - 800-1,200 words]
+## 💡 Introducing the Topic as the Solution
+- Present the main concept for this week
+- Explain how it solves the problem
+- Highlight why this solution is better than alternatives
 
-### Technical Perspective
-[Deep technical explanation with proper terminology]
+## 📚 Deep Explanation
+- Cover **all sub-classifications, definitions, and related concepts**
+- Break down complex ideas into smaller steps
+- Use analogies or relatable examples to improve understanding
+- Show historical context if relevant
+- Ensure explanations are enriched with **verified, up-to-date information from Google Search**
 
-### Business Perspective  
-[How it impacts organizations, ROI, strategic value]
+## 🌟 Practical Examples
+- Provide 2–4 detailed, realistic examples
+- Each example should explain the setup, steps, and outcomes
 
-### User Perspective
-[How end-users experience and benefit from it]
+## 📖 Additional Case Studies (if possible)
+- Provide 1–2 short real-world cases showing the concept in action
 
-### Historical Evolution
-[How this concept evolved over time]
-
-## 🌟 Real-World Examples in Action
-[3-5 detailed examples - 300-500 words each]
-
-### Example 1: [Descriptive Title]
-Context: [When/where this applies]
-The Situation: [Detailed scenario setup]
-The Implementation: [Step-by-step how the concept was applied]
-The Results: [Specific outcomes and metrics]
-Key Takeaways: [What learners should remember]
-
-[Continue with Examples 2-5]
-
-## 📖 Case Studies: Success Stories from the Field
-[2-3 detailed case studies - 400-600 words each]
-
-### Case Study 1: [Company/Organization Name]
-Background: [Company info, industry, size]
-The Challenge: [Specific problem they faced]
-The Solution: [How they applied this week's concept]
-Implementation Details: [Technical and process details]
-Results & Impact: [Quantified outcomes]
-Lessons Learned: [What went well, what could be improved]
-Current Status: [Where they are now]
-
-[Continue with Case Studies 2-3]
-
-## 🔗 Your Complete Resource Library for This Week
-[Curated resources with descriptions - Use Google Search extensively]
-
-### Essential Reading
-- [Resource Title]: [URL] - [Detailed description of content and why it's valuable]
-- [Expert Blog/Article]: [URL] - [What specific insights it provides]
-
-### Video Content
-- [Tutorial/Course Name]: [URL] - [What skills it teaches, duration, difficulty]
-- [Expert Talk/Interview]: [URL] - [Key insights and takeaways]
-
-### Interactive Tools & Platforms
-- [Tool Name]: [URL] - [How to use it, what it helps with]
-
-### Professional Resources
-- [Industry Report]: [URL] - [Key statistics and trends]
-
-## 🎯 Put It Into Practice: This Week's Hands-On Activities
-
-### Exercise 1: [Descriptive Title]
-Objective: [What students will learn/achieve]
-Prerequisites: [Required knowledge/tools]
-Time Required: [Realistic estimate]
-
-Step-by-Step Instructions:
-1. [Detailed step with explanation]
-2. [Detailed step with explanation]
-3. [Continue with all necessary steps]
-
-Expected Outcomes: [What students should achieve]
-Troubleshooting: [Common issues and solutions]
-
-### Exercise 2: [Title]
-[Complete second exercise with same detailed structure]
-
-## 🚀 Looking Ahead: Future Trends and This Week's Relevance
-[Future outlook and emerging developments - 200-300 words]
+## 🚀 Looking Ahead
+- Summarize key takeaways
+- Explain how this week's content sets up the next week's learning
 
 === WEEK [NUMBER] COMPLETED ===
-=== TAKING 10-SECOND BREAK BEFORE NEXT WEEK ===
-```
-
-## 🚀 QUALITY AND DEPTH STANDARDS FOR EACH WEEK
-
-### Content Depth Requirements Per Week:
-- Foundational Level: 1,500-2,000 words total for each week
-- Intermediate Level: 2,000-3,000 words total for each week
-- Advanced Level: 3,000-4,000 words total for each week
-
-### Research Integration Per Week:
-- Use Google Search extensively for each week's topic to find:
-  - Latest developments (within last 6 months)
-  - Expert opinions and thought leadership
-  - Current tools and technologies
-  - Recent case studies and success stories
-  - Industry statistics and trends
-
-### Multi-Modal Content Per Week:
-- Visual Elements: Describe diagrams, flowcharts, infographics needed for this week
-- Interactive Components: Simulations, calculators, assessment tools for this week
-- Multimedia: Videos, podcasts, interactive tutorials for this week
-- Community Resources: Forums, discussion groups relevant to this week
-
-### Current and Relevant Per Week:
-- All examples must be from the last 2-3 years and relevant to this week's topic
-- Include emerging trends and future predictions related to this week
-- Reference current industry standards and best practices for this week's content
-- Cite recent expert opinions specific to this week's subject matter
-
-## 🎯 SPECIALIZED INSTRUCTIONS FOR WEEKLY PROCESSING
-
-### For Technical Topics (Per Week):
-- Include code examples with detailed explanations for this week's concepts
-- Provide architecture diagrams and system designs relevant to this week
-- Add performance benchmarks and comparisons for this week's tools/methods
-- Include security considerations and best practices for this week's content
-
-### For Business Topics (Per Week):
-- Add ROI calculations and business impact metrics for this week's concepts
-- Include strategic frameworks and decision matrices relevant to this week
-- Provide implementation timelines and resource requirements for this week
-- Add risk assessment and mitigation strategies for this week's content
-
-### For Creative Topics (Per Week):
-- Include design principles and aesthetic guidelines for this week
-- Provide creative process workflows relevant to this week
-- Add inspiration galleries and trend analysis for this week
-- Include peer review and feedback frameworks for this week
-
-## 🚀 KEY EXECUTION PRINCIPLES FOR WEEKLY PROCESSING
-
-1. Process Sequentially: Complete one week entirely before moving to the next
-2. Take Breaks: Always include the 10-second break indicator between weeks
-3. Start with Problems: For each week, begin by explaining what problems that week's topic solves
-4. Layer Explanations: Start simple, then add complexity throughout each week
-5. Use Current Examples: All examples must be recent and relevant to each week's content
-6. Multiple Perspectives: Provide technical, business, user viewpoints for each week's topic
-7. Actionable Content: Each week must have practical application guidance
-8. Stay Updated: Use Google Search extensively for each week's current information
-9. Be Comprehensive: Cover each week's topic completely and thoroughly
-
-CRITICAL: Process the course content week by week with 10-second breaks between each week. Transform each week's basic content into extraordinarily detailed educational materials using the problem-solution methodology.
-
-Begin by identifying the total number of weeks, then start processing Week 1 with full depth and detail.
+<<HALT_FOR_SECONDS:10>>
 """
 )
 
@@ -435,7 +296,7 @@ deep_content_pipeline = LoopAgent(
 
 final_pipeline = SequentialAgent(
     name="FinalContentPipeline",
-    sub_agents=[courseplanneragnt, content_refinement_loop, deep_content_pipeline],
+    sub_agents=[courseplanneragnt, content_generator_agent, deep_content_pipeline],
     description="Final pipeline that combines course planning, content generation, and deep content creation.",
 )
 
