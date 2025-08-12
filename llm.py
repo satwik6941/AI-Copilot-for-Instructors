@@ -126,12 +126,15 @@ Create a **cohesive, learner-aligned course plan** that:
 Respond only after carefully analyzing all inputs and formatting the final course plan in structured Markdown."""
 
 try:
-    filepath = pathlib.Path(r"C:\Users\hi\Documents\My works and PPTs\Copilot For Instructors\curriculum.pdf")
+    # Use current working directory for file paths
+    current_dir = pathlib.Path.cwd()
+    curriculum_path = current_dir / "curriculum.pdf"
+    
     response = client.models.generate_content(
         model='gemini-2.0-flash',
         contents=[teaching_style, duration, difficulty_level,
                     types.Part.from_bytes(
-                        data=filepath.read_bytes(),
+                        data=curriculum_path.read_bytes(),
                         mime_type='application/pdf',
                     )],
         config=genai.types.GenerateContentConfig(
@@ -142,8 +145,8 @@ try:
 
     print(response.text)
     
-    # Save the response to a text file for the master agent
-    output_file_path = r"C:\Users\hi\Documents\My works and PPTs\Copilot For Instructors\planner_agent_instruction.txt"
+    # Save the response to a text file in the current working directory
+    output_file_path = current_dir / "planner_agent_instruction.txt"
     try:
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(response.text)
