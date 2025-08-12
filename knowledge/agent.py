@@ -1,14 +1,17 @@
 from google.adk.agents import LlmAgent, SequentialAgent, LoopAgent
 from google.adk.tools import google_search
+from pathlib import Path  # Use Path instead of pathlib for consistency
+import os, re
 
 # Read the planner agent instruction file
 def read_planner_instruction():
     try:
-        file_path = r"C:\Users\hi\Documents\My works and PPTs\Copilot For Instructors\planner_agent_instruction.txt"
-        with open(file_path, 'r', encoding='utf-8') as file:
+        current_dir = Path.cwd()  # Use Path.cwd() instead of pathlib.Path.cwd()
+        planner_path = current_dir / "planner_agent_instruction.txt"
+        with open(planner_path, 'r', encoding='utf-8') as file:
             return file.read()
     except FileNotFoundError:
-        return "Planner instruction file not found. Please ensure the file exists."
+        return "Planner instruction file not found. Please ensure the file exists in the current working directory."
     except Exception as e:
         return f"Error reading planner instruction file: {str(e)}"
 
@@ -283,8 +286,24 @@ Briefly recap what was covered before and explain how it links to this week's to
 
 === WEEK [NUMBER] COMPLETED ===
 <<HALT_FOR_SECONDS:10>>
-"""
+""",
+output_key="deep_course_content"  
 )
+
+# def txt_file_creator(content):
+#     with open("course_content.txt", "w") as txt_file:
+#         txt_file.write(content)
+#     return "TXT file created successfully."
+
+# formatteragent = LlmAgent(
+#     name="FormatterAgent",
+#     model="gemini-2.0-flash",
+#     description="A formatter agent that formats the generated course content into a structured, readable format, into PDFs or DOCX or TXT files",
+#     instruction="""
+# You receive the complete deep course content here: {deep_course_content}
+# Your task is to create txt files for each week using the txt_file_creator tool.
+# """
+# )
 
 # Create the deep content processing pipeline
 deep_content_pipeline = LoopAgent(
