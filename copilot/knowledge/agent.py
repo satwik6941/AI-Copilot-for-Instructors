@@ -1,6 +1,6 @@
 from google.adk.agents import LlmAgent, SequentialAgent, LoopAgent
 from google.adk.tools import google_search
-from pathlib import Path  # Use Path instead of pathlib for consistency
+from pathlib import Path 
 import os, re
 
 # Read the planner agent instruction file
@@ -43,7 +43,7 @@ PROCESSING INSTRUCTIONS:
     - Note the teaching agent system prompt that was generated
 
 2. Create Detailed Course Structure:
-   For Each Module/Week, Provide:
+   For Each Week, Provide:
    - Module Title & Duration: Clear heading with time estimates
    - Learning Objectives: Specific, measurable goals for this module
    - Core Content: Detailed breakdown of topics, concepts, and materials

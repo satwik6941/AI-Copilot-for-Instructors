@@ -6,6 +6,20 @@ from google.genai import types
 
 load_dotenv()
 
+while True:
+    user_name = input("Give a user name: ")
+    if user_name.strip() == "":
+        print("User name cannot be empty. Please enter a valid name.")
+    else:
+        break
+
+while True:
+    user_id = input("Give a user ID (Example: user_id_5678): ")
+    if user_id.strip() == "":
+        print("User ID cannot be empty. Please enter a valid ID.")
+    else:
+        break
+
 difficulty_level = input("Enter the difficulty level (beginner, intermediate, advanced): ")
 if difficulty_level.lower() in ['none',''] or difficulty_level.lower() not in ['beginner', 'intermediate', 'advanced']:
     difficulty_level = "beginner"  # Default to beginner if none specified

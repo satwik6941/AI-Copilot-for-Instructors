@@ -1,6 +1,4 @@
-echo Starting AI Copilot for Instructors...
+echo "Starting the application..."
 python llm.py
-echo Master instructions generated.
-echo Starting agents
-cd knowledge
-adk web agent.py
+cd copilot
+python main.py
