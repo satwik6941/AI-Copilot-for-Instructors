@@ -6,7 +6,11 @@ import os
 # Read the planner agent instruction file
 def read_planner_instruction():
     try:
-        file_path = r"C:\Users\hi\Documents\My works and PPTs\Copilot For Instructors\planner_agent_instruction.txt"
+        # Construct path relative to this file's location.
+        # This assumes 'planner_agent_instruction.txt' is in the project root,
+        # one level above the 'knowledge' directory where this script resides.
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, '..', 'planner_agent_instruction.txt')
         with open(file_path, 'r', encoding='utf-8') as file:
             return file.read()
     except FileNotFoundError:
