@@ -139,47 +139,77 @@ Create a **cohesive, learner-aligned course plan** that:
 
 Respond only after carefully analyzing all inputs and formatting the final course plan in structured Markdown."""
 
-try:
-    # Use current working directory for file paths
+def find_curriculum_file():
+    """Find curriculum.pdf in current directory or parent directories"""
     current_dir = pathlib.Path.cwd()
+    
+    # Check current directory first
     curriculum_path = current_dir / "curriculum.pdf"
+    if curriculum_path.exists():
+        return curriculum_path
     
-    response = client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=[teaching_style, duration, difficulty_level,
-                    types.Part.from_bytes(
-                        data=curriculum_path.read_bytes(),
-                        mime_type='application/pdf',
-                    )],
-        config=genai.types.GenerateContentConfig(
-            tools=[google_search_tool],
-            system_instruction=system_prompt,
-        ),
-    )
-
-    print(response.text)
+    # Check parent directory
+    parent_dir = current_dir.parent
+    curriculum_path = parent_dir / "curriculum.pdf"
+    if curriculum_path.exists():
+        return curriculum_path
     
-    # Save the response to a text file in the current working directory
-    output_file_path = current_dir / "planner_agent_instruction.txt"
-    try:
-        with open(output_file_path, 'w', encoding='utf-8') as f:
-            f.write(response.text)
-        print(f"\nResponse saved to: {output_file_path}")
-    except Exception as e:
-        print(f"Error saving response to file: {e}")
+    # Check root project directory (go up one more level)
+    root_dir = parent_dir.parent
+    curriculum_path = root_dir / "curriculum.pdf"
+    if curriculum_path.exists():
+        return curriculum_path
+    
+    return None
 
-    # Optional: Print grounding metadata if available
-    if response.candidates:
-        for candidate in response.candidates:
-            if candidate.grounding_metadata and candidate.grounding_metadata.web_search_queries:
-                print("\n--- Grounding Metadata ---")
-                print("Web Search Queries:", candidate.grounding_metadata.web_search_queries)
-                if candidate.grounding_metadata.grounding_chunks:
-                    print("Grounding Chunks (Web):")
-                    for chunk in candidate.grounding_metadata.grounding_chunks:
-                        if chunk.web:
-                            print(f"  - Title: {chunk.web.title}, URL: {chunk.web.uri}")
+try:
+    # Find curriculum.pdf file
+    curriculum_path = find_curriculum_file()
+    
+    if curriculum_path is None:
+        print("Error: curriculum.pdf not found in current directory or parent directories.")
+        print("Please ensure curriculum.pdf exists in one of these locations:")
+        print(f"- {pathlib.Path.cwd()}")
+        print(f"- {pathlib.Path.cwd().parent}")
+        print(f"- {pathlib.Path.cwd().parent.parent}")
+    else:
+        print(f"Found curriculum.pdf at: {curriculum_path}")
+        
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=[teaching_style, duration, difficulty_level,
+                        types.Part.from_bytes(
+                            data=curriculum_path.read_bytes(),
+                            mime_type='application/pdf',
+                        )],
+            config=genai.types.GenerateContentConfig(
+                tools=[google_search_tool],
+                system_instruction=system_prompt,
+            ),
+        )
+
+        print(response.text)
+        
+        # Save the response to a text file in the same directory as curriculum.pdf
+        output_file_path = curriculum_path.parent / "planner_agent_instruction.txt"
+        try:
+            with open(output_file_path, 'w', encoding='utf-8') as f:
+                f.write(response.text)
+            print(f"\nResponse saved to: {output_file_path}")
+        except Exception as e:
+            print(f"Error saving response to file: {e}")
+
+        # Optional: Print grounding metadata if available
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.grounding_metadata and candidate.grounding_metadata.web_search_queries:
+                    print("\n--- Grounding Metadata ---")
+                    print("Web Search Queries:", candidate.grounding_metadata.web_search_queries)
+                    if candidate.grounding_metadata.grounding_chunks:
+                        print("Grounding Chunks (Web):")
+                        for chunk in candidate.grounding_metadata.grounding_chunks:
+                            if chunk.web:
+                                print(f"  - Title: {chunk.web.title}, URL: {chunk.web.uri}")
+
 except Exception as e:
     print(f"An error occurred during LLM interaction: {e}")
-else:
-    print("Could not load input data for the LLM.")

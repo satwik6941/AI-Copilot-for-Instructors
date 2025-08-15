@@ -2,23 +2,146 @@ from google.adk.agents import LlmAgent, SequentialAgent, LoopAgent
 from google.adk.tools import google_search
 from pathlib import Path 
 import os, re
+import sqlite3, json
+from google.adk.tools.tool_context import ToolContext
+
+def find_planner_instruction_file():
+    """Find planner_agent_instruction.txt in current directory or parent directories"""
+    current_dir = Path.cwd()
+    
+    # Check current directory first
+    planner_path = current_dir / "planner_agent_instruction.txt"
+    if planner_path.exists():
+        return planner_path
+    
+    # Check parent directory
+    parent_dir = current_dir.parent
+    planner_path = parent_dir / "planner_agent_instruction.txt"
+    if planner_path.exists():
+        return planner_path
+    
+    # Check root project directory (go up one more level)
+    root_dir = parent_dir.parent
+    planner_path = root_dir / "planner_agent_instruction.txt"
+    if planner_path.exists():
+        return planner_path
+    
+    return None
 
 # Read the planner agent instruction file
 def read_planner_instruction():
     try:
-        current_dir = Path.cwd()  # Use Path.cwd() instead of pathlib.Path.cwd()
-        planner_path = current_dir / "planner_agent_instruction.txt"
+        planner_path = find_planner_instruction_file()
+        
+        if planner_path is None:
+            return "Planner instruction file not found. Please ensure planner_agent_instruction.txt exists in current directory or parent directories."
+        
         with open(planner_path, 'r', encoding='utf-8') as file:
             return file.read()
-    except FileNotFoundError:
-        return "Planner instruction file not found. Please ensure the file exists in the current working directory."
     except Exception as e:
         return f"Error reading planner instruction file: {str(e)}"
+
+# === DB READER TOOL (reads *everything* for the current session) ===
+
+def _find_sqlite_file() -> str:
+    """
+    Resolve SQLite path from DATABASE_URL if set, otherwise look for 'my_agent_data.db'
+    in CWD or its parents. Returns an absolute path.
+    """
+    url = os.getenv("DATABASE_URL")
+    if url and url.startswith("sqlite:///"):
+        # strip the prefix, keep absolute/relative path component
+        path = url.replace("sqlite:///", "", 1)
+        return str(Path(path).resolve())
+
+    # Fallbacks: search typical locations
+    candidates = [
+        Path.cwd() / "my_agent_data.db",
+        Path(__file__).resolve().parent / "my_agent_data.db",
+        Path(__file__).resolve().parent.parent / "my_agent_data.db",
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p.resolve())
+    # Last resort: default
+    return str((Path.cwd() / "my_agent_data.db").resolve())
+
+
+def db_read_session_dump(
+    include_state: bool = True,
+    include_events: bool = True,
+    max_chars: int = 400_000,
+    tool_context: ToolContext = None,
+) -> dict:
+    """
+    Dump complete textual context for the *current session*:
+        • sessions.state (JSON)
+        • events (author + plain text extracted from content JSON parts)
+    Truncates to max_chars to keep prompts under model limits.
+    """
+    db_file = _find_sqlite_file()
+    conn = sqlite3.connect(db_file)
+    try:
+        sid = getattr(tool_context, "session_id", None)
+        app = getattr(tool_context, "app_name", None)
+
+        parts = []
+
+        if include_state:
+            cur = conn.cursor()
+            if sid and app:
+                cur.execute(
+                    "SELECT state FROM sessions WHERE id=? AND app_name=? LIMIT 1",
+                    (sid, app),
+                )
+            elif sid:
+                cur.execute("SELECT state FROM sessions WHERE id=? LIMIT 1", (sid,))
+            else:
+                cur.execute("SELECT state FROM sessions ORDER BY created_at DESC LIMIT 1")
+            row = cur.fetchone()
+            state_text = row[0] if row and row[0] else "{}"
+            parts.append("=== SESSION STATE (JSON) ===\n" + state_text)
+
+        if include_events:
+            cur = conn.cursor()
+            if sid:
+                cur.execute(
+                    "SELECT author, content FROM events WHERE session_id=? ORDER BY timestamp ASC",
+                    (sid,),
+                )
+            else:
+                cur.execute("SELECT author, content FROM events ORDER BY timestamp ASC")
+            ev_lines = []
+            for author, content_json in cur.fetchall():
+                text = ""
+                try:
+                    obj = json.loads(content_json or "{}")
+                    if isinstance(obj, dict):
+                        ptexts = []
+                        for p in obj.get("parts", []):
+                            if isinstance(p, dict) and isinstance(p.get("text"), str):
+                                ptexts.append(p["text"])
+                        text = " ".join(t.strip() for t in ptexts if t).strip()
+                except Exception:
+                    pass
+                ev_lines.append(f"[{author}] {text}")
+            parts.append("=== EVENTS (TEXT) ===\n" + "\n".join(ev_lines))
+
+        combined = "\n\n".join(parts).strip()
+        truncated = combined[:max_chars]
+        return {
+            "dump": truncated,
+            "truncated": len(truncated) < len(combined),
+            "chars": len(truncated),
+        }
+    finally:
+        conn.close()
+
 
 # Get the content from the planner instruction file
 planner_content = read_planner_instruction()
 
-courseplanneragnt = LlmAgent(
+courseplanneragent = LlmAgent(
     name="CoursePlannerAgent",
     model="gemini-2.0-flash",
     tools=[google_search],
@@ -104,7 +227,7 @@ content_generator_agent = LlmAgent(
     instruction='''
 You are a Content Generator Agent that writes actual course materials, lessons, and educational content.
 
-INPUT: You will receive a structured course plan that outlines modules, topics, and learning objectives. Here is it {course_plan}.
+INPUT: You will receive session context through database dumps that contain the structured {course plan} and other relevant information.
 
 YOUR PRIMARY TASK: Write the actual content that students and instructors will use - NOT another plan, but the real educational materials.
 
@@ -218,105 +341,10 @@ content_refinement_loop = LoopAgent(
     max_iterations=2,
 )
 
-# course_content_pipeline = SequentialAgent(
-#     name="CourseContentPipeline",
-#     sub_agents=[courseplanneragent, content_refinement_loop],  
-#     description="A sequential pipeline that first creates a course plan and then generates detailed course content.",
-# )
-
-deep_course_content_Creator = LlmAgent(
-    name = "DeepCourseContentCreator",
-    model = "gemini-2.0-flash",
-    tools = [google_search],
-    description = "A deep content creator agent that generates extremely comprehensive and detailed course materials week-by-week.",
-    instruction= """
-You are an Expert Deep Course Content Creator Agent with 20+ years of experience in educational design. 
-You transform basic course content into fully teachable, deeply elaborated week-by-week lessons.
-
-INPUT:
-You will receive course content from the Content Generator Agent that includes modules, topics, and basic explanations.
-Here is it: {course_content}
-
-YOUR MANDATE:
-- Teach using a real-world-problem-first approach
-- Each week should be a complete, stand-alone teaching unit
-- Always connect new weeks to the knowledge from previous weeks
-- Focus on rich explanations, not quizzes or flashcards
-- Use BOTH your LLM intelligence and the Google Search tool to gather, verify, and integrate the **most accurate, current, and outstanding course content possible**
-
-WEEK-BY-WEEK PROCESS:
-1. Identify the total number of weeks in the course
-2. Start with Week 1 (or next incomplete week) and complete it fully before moving on
-3. After each week, output a HALT marker to pause for ~10 seconds before continuing
-
-CONTENT STRUCTURE FOR EACH WEEK:
-=== PROCESSING WEEK [NUMBER] ===
-
-# Week [Number]: [Week Title] - From Real-World Problem to Solution
-
-## 🔗 Connecting from Previous Weeks (if applicable)
-Briefly recap what was covered before and explain how it links to this week's topic.
-
-## 🔍 The Real-World Problem
-- Describe a real scenario, challenge, or case study where the topic is relevant
-- Explain why this problem matters and its real consequences
-
-## 💡 Introducing the Topic as the Solution
-- Present the main concept for this week
-- Explain how it solves the problem
-- Highlight why this solution is better than alternatives
-
-## 📚 Deep Explanation
-- Cover **all sub-classifications, definitions, and related concepts**
-- Break down complex ideas into smaller steps
-- Use analogies or relatable examples to improve understanding
-- Show historical context if relevant
-- Ensure explanations are enriched with **verified, up-to-date information from Google Search**
-
-## 🌟 Practical Examples
-- Provide 2–4 detailed, realistic examples
-- Each example should explain the setup, steps, and outcomes
-
-## 📖 Additional Case Studies (if possible)
-- Provide 1–2 short real-world cases showing the concept in action
-
-## 🚀 Looking Ahead
-- Summarize key takeaways
-- Explain how this week's content sets up the next week's learning
-
-=== WEEK [NUMBER] COMPLETED ===
-<<HALT_FOR_SECONDS:10>>
-""",
-output_key="deep_course_content"  
-)
-
-# def txt_file_creator(content):
-#     with open("course_content.txt", "w") as txt_file:
-#         txt_file.write(content)
-#     return "TXT file created successfully."
-
-# formatteragent = LlmAgent(
-#     name="FormatterAgent",
-#     model="gemini-2.0-flash",
-#     description="A formatter agent that formats the generated course content into a structured, readable format, into PDFs or DOCX or TXT files",
-#     instruction="""
-# You receive the complete deep course content here: {deep_course_content}
-# Your task is to create txt files for each week using the txt_file_creator tool.
-# """
-# )
-
-# Create the deep content processing pipeline
-deep_content_pipeline = LoopAgent(
-    name="DeepContentPipeline", 
-    sub_agents=[deep_course_content_Creator],
-    description="Complete pipeline: planning → content generation → deep week-by-week content creation",
-    max_iterations=5,
-)
-
 final_pipeline = SequentialAgent(
     name="FinalContentPipeline",
-    sub_agents=[courseplanneragnt, content_refinement_loop, deep_content_pipeline],
-    description="Final pipeline that combines course planning, content generation, and deep content creation.",
+    sub_agents=[courseplanneragent, content_refinement_loop],
+    description="Planning → content generation → deep, instructor-ready weekly content.",
 )
 
 root_agent = final_pipeline
