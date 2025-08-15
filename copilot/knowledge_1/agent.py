@@ -61,7 +61,7 @@ def db_read_session_dump(
             elif sid:
                 cur.execute("SELECT state FROM sessions WHERE id=? LIMIT 1", (sid,))
             else:
-                cur.execute("SELECT state FROM sessions ORDER BY created_at DESC LIMIT 1")
+                cur.execute("SELECT state FROM sessions ORDER BY rowid DESC LIMIT 1")
             row = cur.fetchone()
             state_text = row[0] if row and row[0] else "{}"
             parts.append("=== SESSION STATE (JSON) ===\n" + state_text)

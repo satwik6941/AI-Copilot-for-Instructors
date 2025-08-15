@@ -2,38 +2,90 @@ from google import genai
 from dotenv import load_dotenv
 import os
 import pathlib
+import json
 from google.genai import types
 
 load_dotenv()
 
-while True:
-    user_name = input("Give a user name: ")
-    if user_name.strip() == "":
-        print("User name cannot be empty. Please enter a valid name.")
-    else:
-        break
+def load_user_inputs():
+    """Load user inputs from file if exists"""
+    config_file = "user_config.json"
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return None
+    return None
 
-while True:
-    user_id = input("Give a user ID (Example: user_id_5678): ")
-    if user_id.strip() == "":
-        print("User ID cannot be empty. Please enter a valid ID.")
-    else:
-        break
+def save_user_inputs(user_name, user_id, difficulty_level, duration, teaching_style):
+    """Save user inputs to file"""
+    config_file = "user_config.json"
+    config_data = {
+        "user_name": user_name,
+        "user_id": user_id,
+        "difficulty_level": difficulty_level,
+        "duration": duration,
+        "teaching_style": teaching_style
+    }
+    try:
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2)
+    except:
+        pass
 
-difficulty_level = input("Enter the difficulty level (beginner, intermediate, advanced): ")
-if difficulty_level.lower() in ['none',''] or difficulty_level.lower() not in ['beginner', 'intermediate', 'advanced']:
-    difficulty_level = "beginner"  # Default to beginner if none specified
+# Try to load existing user inputs
+saved_inputs = load_user_inputs()
 
-while True:
-    duration = input("Enter the desired duration for the course (e.g., 4 weeks, 8 weeks): ")
-    if duration == "" or duration.lower() == "none":
-        print("Duration cannot be empty. Please enter a valid duration.")
-    else:
-        break
+if saved_inputs:
+    print("Using saved user configuration:")
+    print(f"User Name: {saved_inputs['user_name']}")
+    print(f"User ID: {saved_inputs['user_id']}")
+    print(f"Difficulty Level: {saved_inputs['difficulty_level']}")
+    print(f"Duration: {saved_inputs['duration']}")
+    print(f"Teaching Style: {saved_inputs['teaching_style']}")
+    
+    user_name = saved_inputs['user_name']
+    user_id = saved_inputs['user_id']
+    difficulty_level = saved_inputs['difficulty_level']
+    duration = saved_inputs['duration']
+    teaching_style = saved_inputs['teaching_style']
+    print("Using existing configuration.")
+else:
+    print("First time setup - please provide your details:")
+    
+    while True:
+        user_name = input("Give a user name: ")
+        if user_name.strip() == "":
+            print("User name cannot be empty. Please enter a valid name.")
+        else:
+            break
 
-teaching_style = input("Enter preferred teaching style (e.g., hands-on, theoretical, project-based): ")
-if teaching_style.lower() == "none":
-    teaching_style = "theoretical"  # Default to theoretical if none specified
+    while True:
+        user_id = input("Give a user ID (Example: user_id_5678): ")
+        if user_id.strip() == "":
+            print("User ID cannot be empty. Please enter a valid ID.")
+        else:
+            break
+
+    difficulty_level = input("Enter the difficulty level (beginner, intermediate, advanced): ")
+    if difficulty_level.lower() in ['none',''] or difficulty_level.lower() not in ['beginner', 'intermediate', 'advanced']:
+        difficulty_level = "beginner"  # Default to beginner if none specified
+
+    while True:
+        duration = input("Enter the desired duration for the course (e.g., 4 weeks, 8 weeks): ")
+        if duration == "" or duration.lower() == "none":
+            print("Duration cannot be empty. Please enter a valid duration.")
+        else:
+            break
+
+    teaching_style = input("Enter preferred teaching style (e.g., hands-on, theoretical, project-based): ")
+    if teaching_style.lower() == "none":
+        teaching_style = "theoretical"  # Default to theoretical if none specified
+    
+    # Save inputs for future runs
+    save_user_inputs(user_name, user_id, difficulty_level, duration, teaching_style)
+    print("Configuration saved for future runs.")
 
 print("Thank you for providing the inputs. Processing your request...")
 
