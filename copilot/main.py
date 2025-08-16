@@ -1,9 +1,9 @@
-# main.py
 import asyncio
 from dotenv import load_dotenv
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService
 from google.genai import types
+from datetime import datetime
 
 # if you're running from the parent folder and importing config:
 import os, sys
@@ -61,6 +61,21 @@ async def run_deep_agent(session_id: str) -> None:
         print("\n=== Deep Content (preview) ===\n")
         # print a larger chunk for easy copying; adjust as you prefer
         print(deep if len(deep) < 12000 else deep[:12000] + "\n... [truncated]\n")
+
+        # Save full deep content to a file under "Inputs and Outputs" directory at project root
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        io_dir = os.path.join(project_root, "Inputs and Outputs")
+        os.makedirs(io_dir, exist_ok=True)
+
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"deep_content_{session_id}_{ts}.txt"
+        out_path = os.path.join(io_dir, filename)
+        try:
+            with open(out_path, 'w', encoding='utf-8') as f:
+                f.write(deep)
+            print(f"\n[Stage 2] Deep content saved to: {out_path}")
+        except Exception as e:
+            print(f"\n[Stage 2] Failed to save deep content to file: {e}")
     else:
         print("[Stage 2] No deep content found in state. Check agent/tools and logs.")
 

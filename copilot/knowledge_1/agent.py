@@ -1,4 +1,4 @@
-from google.adk.agents import LlmAgent, SequentialAgent, LoopAgent
+from google.adk.agents import LlmAgent, LoopAgent
 from google.adk.tools import google_search
 from pathlib import Path 
 import os
@@ -110,14 +110,14 @@ deepcontentgeneration = LlmAgent(
         "extremely detailed, instructor-teachable weekly content that builds on "
         "the CoursePlannerAgent and ContentGeneratorAgent outputs."
     ),
-    instruction=r"""
+    instruction=f"""
 You are the **Deep Content Generation** agent.
 
 GOAL
 - Produce extremely detailed, instructor-ready weekly course content, grounded in **all prior work**:
 
 MUST DO FIRST
-1) Call `db_read_session_dump(include_state=true, include_events=true, max_chars=400000)`.
+1) Call `db_read_session_dump(include_state=true, include_events=true)`.
 2) Read the returned 'dump' **word by word, line by line**. This is the authoritative context for this session.
 3) If the response indicates `truncated=true`, call the tool again with a larger `max_chars` and continue reading until you have everything you need.
 
