@@ -2,8 +2,8 @@ from google import genai
 from dotenv import load_dotenv
 import os
 import pathlib
-import json
 from google.genai import types
+import json
 
 load_dotenv()
 
@@ -17,6 +17,7 @@ def load_user_inputs():
         except:
             return None
     return None
+
 
 def save_user_inputs(user_name, user_id, difficulty_level, duration, teaching_style):
     """Save user inputs to file"""
@@ -34,8 +35,10 @@ def save_user_inputs(user_name, user_id, difficulty_level, duration, teaching_st
     except:
         pass
 
+
 # Try to load existing user inputs
 saved_inputs = load_user_inputs()
+
 
 if saved_inputs:
     print("Using saved user configuration:")
@@ -61,6 +64,7 @@ else:
         else:
             break
 
+
     while True:
         user_id = input("Give a user ID (Example: user_id_5678): ")
         if user_id.strip() == "":
@@ -68,9 +72,11 @@ else:
         else:
             break
 
-    difficulty_level = input("Enter the difficulty level (beginner, intermediate, advanced): ")
-    if difficulty_level.lower() in ['none',''] or difficulty_level.lower() not in ['beginner', 'intermediate', 'advanced']:
-        difficulty_level = "beginner"  # Default to beginner if none specified
+
+    difficulty_level = input("Enter the difficulty level (Foundational, Intermediate, Advanced): ")
+    if difficulty_level.lower() in ['none',''] or difficulty_level.lower() not in ['foundational', 'intermediate', 'advanced']:
+        difficulty_level = "Foundational"  # Default to Foundational if none specified
+
 
     while True:
         duration = input("Enter the desired duration for the course (e.g., 4 weeks, 8 weeks): ")
@@ -79,13 +85,15 @@ else:
         else:
             break
 
-    teaching_style = input("Enter preferred teaching style (e.g., hands-on, theoretical, project-based): ")
+
+    teaching_style = input("Enter preferred teaching style (e.g., Exploratory & Guided, Project-Based / Hands-On, Conceptual & Conversational): ")
     if teaching_style.lower() == "none":
-        teaching_style = "theoretical"  # Default to theoretical if none specified
+        teaching_style = "Exploratory & Guided"  # Default to Exploratory & Guided if none specified
     
     # Save inputs for future runs
     save_user_inputs(user_name, user_id, difficulty_level, duration, teaching_style)
     print("Configuration saved for future runs.")
+
 
 print("Thank you for providing the inputs. Processing your request...")
 
@@ -101,8 +109,9 @@ system_prompt = """You are a course design assistant.
 You will be provided with the following **mandatory inputs**:
 1. A **curriculum document** in PDF format containing existing course content (e.g., syllabi, outlines, topics, activities, or readings)
 2. A **course topic or name** describing what the learner or instructor wants the course to focus on
-3. A selected **teaching style** (see below)
-4. A selected **difficulty level** (see below)
+3. A selected **difficulty level** (see below)
+4. A selected **teaching style** (see below) 
+5. A selected **duration** (see below)
 
 ---
 
@@ -191,77 +200,44 @@ Create a **cohesive, learner-aligned course plan** that:
 
 Respond only after carefully analyzing all inputs and formatting the final course plan in structured Markdown."""
 
-def find_curriculum_file():
-    """Find curriculum.pdf in current directory or parent directories"""
-    current_dir = pathlib.Path.cwd()
-    
-    # Check current directory first
-    curriculum_path = current_dir / "curriculum.pdf"
-    if curriculum_path.exists():
-        return curriculum_path
-    
-    # Check parent directory
-    parent_dir = current_dir.parent
-    curriculum_path = parent_dir / "curriculum.pdf"
-    if curriculum_path.exists():
-        return curriculum_path
-    
-    # Check root project directory (go up one more level)
-    root_dir = parent_dir.parent
-    curriculum_path = root_dir / "curriculum.pdf"
-    if curriculum_path.exists():
-        return curriculum_path
-    
-    return None
-
 try:
-    # Find curriculum.pdf file
-    curriculum_path = find_curriculum_file()
+    filepath = pathlib.Path("Inputs and Outputs/curriculum.pdf")
+    response = client.models.generate_content(
+        model='gemini-2.5-pro',
+        contents=[teaching_style, duration, difficulty_level,
+                    types.Part.from_bytes(
+                        data=filepath.read_bytes(),
+                        mime_type='application/pdf',
+                    )],
+        config=genai.types.GenerateContentConfig(
+            tools=[google_search_tool],
+            system_instruction=system_prompt,
+        ),
+    )
+
+    print(response.text)
     
-    if curriculum_path is None:
-        print("Error: curriculum.pdf not found in current directory or parent directories.")
-        print("Please ensure curriculum.pdf exists in one of these locations:")
-        print(f"- {pathlib.Path.cwd()}")
-        print(f"- {pathlib.Path.cwd().parent}")
-        print(f"- {pathlib.Path.cwd().parent.parent}")
-    else:
-        print(f"Found curriculum.pdf at: {curriculum_path}")
-        
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=[teaching_style, duration, difficulty_level,
-                        types.Part.from_bytes(
-                            data=curriculum_path.read_bytes(),
-                            mime_type='application/pdf',
-                        )],
-            config=genai.types.GenerateContentConfig(
-                tools=[google_search_tool],
-                system_instruction=system_prompt,
-            ),
-        )
+    # Save the response to a text file for the master agent
+    output_file_path = "Inputs and Outputs/planner_agent_instruction.txt"
+    try:
+        with open(output_file_path, 'w', encoding='utf-8') as f:
+            f.write(response.text)
+        print(f"\nResponse saved to: {output_file_path}")
+    except Exception as e:
+        print(f"Error saving response to file: {e}")
 
-        print(response.text)
-        
-        # Save the response to a text file in the same directory as curriculum.pdf
-        output_file_path = curriculum_path.parent / "planner_agent_instruction.txt"
-        try:
-            with open(output_file_path, 'w', encoding='utf-8') as f:
-                f.write(response.text)
-            print(f"\nResponse saved to: {output_file_path}")
-        except Exception as e:
-            print(f"Error saving response to file: {e}")
-
-        # Optional: Print grounding metadata if available
-        if response.candidates:
-            for candidate in response.candidates:
-                if candidate.grounding_metadata and candidate.grounding_metadata.web_search_queries:
-                    print("\n--- Grounding Metadata ---")
-                    print("Web Search Queries:", candidate.grounding_metadata.web_search_queries)
-                    if candidate.grounding_metadata.grounding_chunks:
-                        print("Grounding Chunks (Web):")
-                        for chunk in candidate.grounding_metadata.grounding_chunks:
-                            if chunk.web:
-                                print(f"  - Title: {chunk.web.title}, URL: {chunk.web.uri}")
-
+    # Optional: Print grounding metadata if available
+    if response.candidates:
+        for candidate in response.candidates:
+            if candidate.grounding_metadata and candidate.grounding_metadata.web_search_queries:
+                print("\n--- Grounding Metadata ---")
+                print("Web Search Queries:", candidate.grounding_metadata.web_search_queries)
+                if candidate.grounding_metadata.grounding_chunks:
+                    print("Grounding Chunks (Web):")
+                    for chunk in candidate.grounding_metadata.grounding_chunks:
+                        if chunk.web:
+                            print(f"  - Title: {chunk.web.title}, URL: {chunk.web.uri}")
 except Exception as e:
     print(f"An error occurred during LLM interaction: {e}")
+else:
+    print("Could not load input data for the LLM.")
