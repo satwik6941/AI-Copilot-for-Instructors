@@ -51,7 +51,7 @@ planner_content = read_planner_output()
 
 deep_course_content_Creator = LlmAgent(
     name = "DeepCourseContentCreator",
-    model = "gemini-2.5-flash",
+    model = "gemini-2.0-flash",
     tools = [write_to_file],  
     description = "A deep content creator agent that generates extremely comprehensive and detailed course materials week-by-week and saves them to a file.",
     instruction= f"""
