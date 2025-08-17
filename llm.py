@@ -200,20 +200,30 @@ Create a **cohesive, learner-aligned course plan** that:
 
 Respond only after carefully analyzing all inputs and formatting the final course plan in structured Markdown."""
 
-try:
-    filepath = pathlib.Path("Inputs and Outputs/curriculum.pdf")
+def generate_course_content(client, teaching_style, duration, difficulty_level, google_search_tool, system_prompt, filepath=None):
+    # Build contents list - start with basic inputs
+    contents = [teaching_style, duration, difficulty_level]
+    
+    # Add PDF content only if filepath is provided and file exists
+    if filepath and filepath.exists():
+        contents.append(types.Part.from_bytes(
+            data=filepath.read_bytes(),
+            mime_type='application/pdf',
+        ))
+    
     response = client.models.generate_content(
         model='gemini-2.5-pro',
-        contents=[teaching_style, duration, difficulty_level,
-                    types.Part.from_bytes(
-                        data=filepath.read_bytes(),
-                        mime_type='application/pdf',
-                    )],
+        contents=contents,
         config=genai.types.GenerateContentConfig(
             tools=[google_search_tool],
             system_instruction=system_prompt,
         ),
     )
+    return response
+
+try:
+    filepath = pathlib.Path("Inputs and Outputs/curriculum.pdf")
+    response = generate_course_content(client, teaching_style, duration, difficulty_level, google_search_tool, system_prompt, filepath)
 
     print(response.text)
     
