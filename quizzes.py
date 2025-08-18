@@ -15,7 +15,21 @@ load_dotenv()
 
 def generate_single_quiz(client, google_search_tool, system_prompt, combined_content, quiz_number, quiz_theme, user_config):
     # Create specific task for this quiz
-    task = f"Generate Quiz Paper {quiz_number}: {quiz_theme} - Create exactly 10 conceptual questions focused on {quiz_theme.lower()}. This should be a complete, standalone quiz paper."
+    task = f"""
+GENERATE ONLY ONE QUIZ PAPER:
+
+Quiz Theme: {quiz_theme}
+Quiz Number: {quiz_number}
+
+Requirements:
+- Create exactly 10 conceptual questions focused specifically on {quiz_theme.lower()}
+- This should be a complete, standalone quiz paper with only these 10 questions
+- DO NOT generate multiple quiz papers
+- DO NOT include other quiz themes
+- Focus exclusively on the theme: {quiz_theme}
+
+Format the output as a single, complete quiz paper ready for students to take.
+"""
     
     print(f"🔄 Generating Quiz Paper {quiz_number}: {quiz_theme}...")
     
@@ -34,8 +48,34 @@ def generate_single_quiz(client, google_search_tool, system_prompt, combined_con
         if not response or not hasattr(response, 'text') or not response.text:
             print(f"❌ No response for Quiz {quiz_number}")
             return None
+        
+        # Extract only the relevant quiz content (filter out any extra content)
+        quiz_content = response.text
+        
+        # If the response contains multiple quizzes, try to extract just this one
+        if f"Quiz Paper {quiz_number + 1}" in quiz_content or "Quiz Paper 2" in quiz_content:
+            print(f"⚠️ Response contains multiple quizzes, extracting Quiz {quiz_number} only...")
+            # Try to extract just this quiz
+            lines = quiz_content.split('\n')
+            quiz_lines = []
+            found_start = False
             
-        return response.text
+            for line in lines:
+                # Start collecting when we find our quiz
+                if f"Quiz Paper {quiz_number}" in line or (quiz_number == 1 and "Quiz Paper:" in line and not "Quiz Paper 2" in line):
+                    found_start = True
+                    quiz_lines.append(line)
+                elif found_start and (f"Quiz Paper {quiz_number + 1}" in line or "Quiz Paper 2" in line or "Quiz Paper 3" in line):
+                    # Stop when we hit the next quiz
+                    break
+                elif found_start:
+                    quiz_lines.append(line)
+            
+            if quiz_lines:
+                quiz_content = '\n'.join(quiz_lines).strip()
+                print(f"✅ Extracted individual quiz content ({len(quiz_content)} characters)")
+            
+        return quiz_content
         
     except Exception as e:
         print(f"❌ Error generating Quiz {quiz_number}: {e}")
@@ -383,8 +423,11 @@ def create_quiz_system_prompt(difficulty_level):
     
     system_prompt = f"""You are an Expert Quiz Designer specializing in creating meaningful, conceptual assessments that develop critical thinking, logical reasoning, and deep understanding.
 
+## 🎯 CRITICAL INSTRUCTION
+Generate EXACTLY ONE quiz paper only. Do not generate multiple quizzes. Focus solely on the specific theme provided in the task.
+
 ## 📋 YOUR MISSION
-Create 3 comprehensive quiz papers (10 questions each) based on the provided course content that challenge learners to think critically and apply concepts rather than memorize facts.
+Create 1 comprehensive quiz paper (10 questions) based on the provided course content that challenges learners to think critically and apply concepts rather than memorize facts.
 
 ## 🎯 INPUT ANALYSIS REQUIREMENTS
 You will receive two types of course content:
@@ -424,9 +467,9 @@ You will receive two types of course content:
 
 ## 🎪 QUIZ STRUCTURE REQUIREMENTS
 
-### Quiz Paper Format:
+### Quiz Paper Format (GENERATE ONLY ONE):
 ```
-# Quiz Paper [Number]: [Focused Topic/Theme]
+# Quiz Paper: [Focused Topic/Theme]
 
 ## Instructions for Students:
 - Time Limit: [Appropriate time based on complexity]
