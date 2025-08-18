@@ -200,9 +200,34 @@ Create a **cohesive, learner-aligned course plan** that:
 
 Respond only after carefully analyzing all inputs and formatting the final course plan in structured Markdown."""
 
-def generate_course_content(client, teaching_style, duration, difficulty_level, google_search_tool, system_prompt, filepath=None):
+def generate_course_content(client, teaching_style, duration, difficulty_level, google_search_tool, system_prompt, filepath=None, course_content=None, task=None):
+    """
+    Generate course content using the LLM
+    
+    Args:
+        client: The Gemini client instance
+        teaching_style: Teaching style preference
+        duration: Course duration
+        difficulty_level: Difficulty level
+        google_search_tool: Google search tool for the LLM
+        system_prompt: System instruction for the LLM
+        filepath: Optional path to PDF file to include
+        course_content: Optional text content to include (for quiz generation, etc.)
+        task: Optional specific task description
+        
+    Returns:
+        Generated response from the LLM
+    """
     # Build contents list - start with basic inputs
     contents = [teaching_style, duration, difficulty_level]
+    
+    # Add course content if provided (for quiz generation, analysis, etc.)
+    if course_content:
+        contents.append(f"COURSE CONTENT:\n{course_content}")
+    
+    # Add task description if provided
+    if task:
+        contents.append(f"TASK: {task}")
     
     # Add PDF content only if filepath is provided and file exists
     if filepath and filepath.exists():
