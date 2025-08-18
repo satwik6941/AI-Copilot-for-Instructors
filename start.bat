@@ -5,3 +5,6 @@ echo Starting agents
 cd copilot
 python main.py
 python deep_main.py
+cd ..
+python course_material.py
+python quizzes.py

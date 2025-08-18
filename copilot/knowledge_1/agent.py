@@ -119,7 +119,7 @@ Briefly recap what was covered before and explain how it links to this week's to
 
 === WEEK [NUMBER] COMPLETED ===
 
-<Halt for 3 seconds>
+<Halt/Pause for 4 seconds>
 
 WORKFLOW SUMMARY:
 1. Start by calling write_to_file to create 'Inputs and Outputs/deep_course_content_output.txt' with course header (mode='w')

@@ -20,7 +20,7 @@ planner_content = read_planner_instruction()
 
 courseplanneragent = LlmAgent(
     name="CoursePlannerAgent",
-    model="gemini-2.5-pro",
+    model="gemini-2.5-flash",
     tools=[google_search],
     description="A course planning agent that helps design and organize educational content.",
     instruction=f"""
