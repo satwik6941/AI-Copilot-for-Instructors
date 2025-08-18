@@ -1,4 +1,5 @@
 google-adk
 google-genai
 python-dotenv 
-reportlab 
+reportlab
+python-docx
