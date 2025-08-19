@@ -519,10 +519,10 @@ def generate_flashcards():
     
     print(f"✅ Processing {len(flashcards)} flashcards")
     
-    # Create output directory
-    output_dir = "Flash-Cards"
+    # Create output directory under Inputs and Outputs
+    output_dir = os.path.join("Inputs and Outputs", "flashcards")
     os.makedirs(output_dir, exist_ok=True)
-    print(f"📁 Created output directory: {output_dir}")
+    print(f"📁 Created flashcards output directory: {output_dir}")
     
     # Generate flashcard images
     print(f"\n🎨 Creating flashcard images...")
@@ -584,7 +584,7 @@ def main():
             print("📚 High-quality flashcards covering all course weeks have been created.")
             print("🎨 Each flashcard has both question and answer sides as separate images.")
             print("📄 A summary document lists all flashcards for easy reference.")
-            print(f"\n📁 Check the 'Flash-Cards' folder for all generated files!")
+            print(f"\n📁 Check the 'Inputs and Outputs/flashcards' folder for all generated files!")
         else:
             print("\n❌ Flashcard generation failed.")
             

@@ -22,13 +22,17 @@ Quiz Theme: {quiz_theme}
 Quiz Number: {quiz_number}
 
 Requirements:
-- Create exactly 10 conceptual questions focused specifically on {quiz_theme.lower()}
-- This should be a complete, standalone quiz paper with only these 10 questions
+- Create exactly 10-15 short questions focused specifically on {quiz_theme.lower()}
+- Each question is worth 1 mark only
+- Total time limit: 10-15 minutes
+- Questions should be answerable in 1-2 sentences
+- Focus on key facts, definitions, and quick applications
+- This should be a complete, standalone quiz paper with only these questions
 - DO NOT generate multiple quiz papers
 - DO NOT include other quiz themes
 - Focus exclusively on the theme: {quiz_theme}
 
-Format the output as a single, complete quiz paper ready for students to take.
+Format the output as a single, complete quiz paper ready for students to take in 10-15 minutes.
 """
     
     print(f"🔄 Generating Quiz Paper {quiz_number}: {quiz_theme}...")
@@ -421,13 +425,20 @@ def create_quiz_system_prompt(difficulty_level):
     # Get the appropriate difficulty standard
     current_standard = difficulty_standards.get(difficulty_level.lower(), difficulty_standards["intermediate"])
     
-    system_prompt = f"""You are an Expert Quiz Designer specializing in creating meaningful, conceptual assessments that develop critical thinking, logical reasoning, and deep understanding.
+    system_prompt = f"""You are an Expert Quiz Designer specializing in creating concise, focused assessments for quick knowledge evaluation and practice.
 
 ## 🎯 CRITICAL INSTRUCTION
 Generate EXACTLY ONE quiz paper only. Do not generate multiple quizzes. Focus solely on the specific theme provided in the task.
 
 ## 📋 YOUR MISSION
-Create 1 comprehensive quiz paper (10 questions) based on the provided course content that challenges learners to think critically and apply concepts rather than memorize facts.
+Create 1 focused quiz paper (10-15 questions, 1 mark each) based on the provided course content designed for 10-15 minute completion time.
+
+## ⏱️ TIME CONSTRAINT REQUIREMENTS
+- **Total Duration**: 10-15 minutes maximum
+- **Question Count**: 10-15 questions (1 mark each)
+- **Time per Question**: ~1 minute per question
+- **Question Types**: Quick recall, short application, brief analysis
+- **Answer Length**: 1-2 sentences maximum per question
 
 ## 🎯 INPUT ANALYSIS REQUIREMENTS
 You will receive two types of course content:
@@ -437,17 +448,28 @@ You will receive two types of course content:
 **ANALYSIS MANDATE:**
 - Thoroughly analyze BOTH content sources
 - Identify key concepts, principles, and learning objectives across all modules/weeks
-- Extract practical applications, real-world scenarios, and problem-solving approaches
-- Understand the progression of complexity throughout the course
-- Note any case studies, examples, or practical implementations mentioned
+- Extract the most important facts, definitions, and core concepts
+- Focus on essential knowledge that can be tested quickly
+- Note any key algorithms, methods, or frameworks mentioned
 
 ## 🧠 QUIZ DESIGN PHILOSOPHY
 
+### ✅ FOCUS ON These Question Types (1 mark each):
+- **Quick Definitions**: "Define [concept] in one sentence."
+- **Key Facts**: "What is the main purpose of [algorithm/method]?"
+- **Simple Applications**: "In which scenario would you use [concept]?"
+- **Brief Comparisons**: "What is the key difference between X and Y?"
+- **Essential Steps**: "List the main steps in [process] (3-4 steps max)."
+- **Quick Recognition**: "Which algorithm is best for [specific problem type]?"
+- **Core Properties**: "What are 2 key characteristics of [concept]?"
+
 ### ❌ AVOID These Question Types:
-- Simple definitions ("What is...?")
-- Basic recall ("List the steps...")
-- Direct examples ("Give an example of...")
-- Yes/No questions
+- Long essay questions
+- Complex multi-step problems
+- Detailed explanations requiring paragraphs
+- Questions requiring extensive calculations
+- Multiple concept integration questions
+- Open-ended discussion questions
 - Multiple choice with obvious answers
 - Memorization-based questions
 
@@ -472,25 +494,25 @@ You will receive two types of course content:
 # Quiz Paper: [Focused Topic/Theme]
 
 ## Instructions for Students:
-- Time Limit: [Appropriate time based on complexity]
+- Time Limit: 10-15 minutes
+- Total Marks: 10-15 marks (1 mark per question)
 - This quiz focuses on [specific aspect of the course]
-- Read each question carefully and provide detailed reasoning
-- Show your thinking process, not just final answers
-- Real-world application and critical analysis are valued
+- Answer each question concisely (1-2 sentences maximum)
+- Quick recall and understanding are tested
 
 ## Questions:
 
-### Question 1: [Question Type] - [Topic Focus]
-[Detailed, thought-provoking question that requires analysis]
+### Question 1 (1 mark): [Question Type] - [Topic Focus]
+[Brief, focused question for quick answer]
 
 ---
 
-### Question 2: [Question Type] - [Topic Focus]
-[Another comprehensive question]
+### Question 2 (1 mark): [Question Type] - [Topic Focus]
+[Another concise question]
 
 ---
 
-[Continue for all 10 questions]
+[Continue for all 10-15 questions]
 ```
 
 ## 🌟 QUESTION DESIGN TEMPLATES
@@ -608,9 +630,10 @@ def generate_quizzes():
     
     print("\n🧠 Generating individual quiz papers...")
     
-    # Ensure output directory exists
-    output_dir = "Inputs and Outputs"
+    # Ensure output directory exists under Inputs and Outputs
+    output_dir = os.path.join("Inputs and Outputs", "quizzes")
     os.makedirs(output_dir, exist_ok=True)
+    print(f"📁 Created quizzes output directory: {output_dir}")
     
     generated_files = []
     

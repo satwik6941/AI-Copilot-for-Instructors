@@ -6,6 +6,12 @@ from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import RGBColor
 from docx.enum.text import WD_COLOR_INDEX
+from docx2pdf import convert
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
 
 def read_course_content_files():
     planner_content = ""
@@ -400,30 +406,534 @@ def create_course_material_docx():
         
     return created_files
 
+def create_combined_docx(planner_content, deep_content, output_dir):
+    """Create a combined DOCX file with all course content"""
+    
+    # Create a new document
+    doc = Document()
+    
+    # Set document margins
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+    
+    # Add main title
+    title = doc.add_heading('Complete Course Material', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add a separator line
+    doc.add_paragraph('═' * 80)
+    doc.add_paragraph()
+    
+    # Add course plan section
+    if planner_content:
+        plan_heading = doc.add_heading('Course Plan & Structure', 1)
+        doc.add_paragraph('─' * 60)
+        
+        # Process planner content
+        plan_lines = planner_content.split('\n')
+        current_paragraph = ""
+        
+        for line in plan_lines:
+            line = line.strip()
+            if not line:
+                if current_paragraph:
+                    if '**' in current_paragraph:
+                        p = doc.add_paragraph()
+                        parts = current_paragraph.split('**')
+                        for i, part in enumerate(parts):
+                            run = p.add_run(part)
+                            if i % 2 == 1:
+                                run.bold = True
+                    else:
+                        doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                doc.add_paragraph()
+                continue
+            
+            # Handle headings
+            if line.startswith('### **'):
+                if current_paragraph:
+                    doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                heading_text = line.replace('### **', '').replace('**', '')
+                doc.add_heading(heading_text, 2)
+                
+            elif line.startswith('### '):
+                if current_paragraph:
+                    doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                doc.add_heading(line.replace('### ', ''), 3)
+                
+            elif line.startswith('## '):
+                if current_paragraph:
+                    doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                doc.add_heading(line.replace('## ', ''), 2)
+                
+            elif line.startswith('*   ') or line.startswith('    *   '):
+                if current_paragraph:
+                    doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                bullet_text = line.replace('*   ', '').replace('    *   ', '')
+                if '**' in bullet_text:
+                    p = doc.add_paragraph(style='List Bullet')
+                    parts = bullet_text.split('**')
+                    for i, part in enumerate(parts):
+                        run = p.add_run(part)
+                        if i % 2 == 1:
+                            run.bold = True
+                else:
+                    doc.add_paragraph(bullet_text, style='List Bullet')
+                    
+            elif line.startswith('---'):
+                if current_paragraph:
+                    doc.add_paragraph(current_paragraph)
+                    current_paragraph = ""
+                doc.add_paragraph('─' * 60)
+                
+            else:
+                if current_paragraph:
+                    current_paragraph += " " + line
+                else:
+                    current_paragraph = line
+        
+        # Add any remaining paragraph
+        if current_paragraph:
+            if '**' in current_paragraph:
+                p = doc.add_paragraph()
+                parts = current_paragraph.split('**')
+                for i, part in enumerate(parts):
+                    run = p.add_run(part)
+                    if i % 2 == 1:
+                        run.bold = True
+            else:
+                doc.add_paragraph(current_paragraph)
+    
+    # Add page break
+    doc.add_page_break()
+    
+    # Add detailed course content section
+    if deep_content:
+        deep_heading = doc.add_heading('Detailed Course Content', 1)
+        doc.add_paragraph('─' * 60)
+        
+        # Process deep content (parse weeks)
+        weeks = parse_weeks_from_content(deep_content)
+        
+        for week in weeks:
+            # Add week heading
+            week_heading = doc.add_heading(f"Week {week['number']}: Detailed Content", 2)
+            
+            # Process week content
+            content_lines = week['content'].split('\n')
+            current_paragraph = ""
+            in_code_block = False
+            
+            for line in content_lines:
+                original_line = line
+                line = line.strip()
+                
+                if not line:
+                    if current_paragraph:
+                        if '**' in current_paragraph:
+                            p = doc.add_paragraph()
+                            parts = current_paragraph.split('**')
+                            for i, part in enumerate(parts):
+                                run = p.add_run(part)
+                                if i % 2 == 1:
+                                    run.bold = True
+                        else:
+                            doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    doc.add_paragraph()
+                    continue
+                
+                # Handle code blocks
+                if line.startswith('```'):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    in_code_block = not in_code_block
+                    continue
+                    
+                if in_code_block:
+                    p = doc.add_paragraph(original_line)
+                    for run in p.runs:
+                        run.font.name = 'Courier New'
+                    continue
+                
+                # Handle headings with icons
+                if line.startswith('## 🔗') or line.startswith('## 🔍') or line.startswith('## 💡') or line.startswith('## 📚') or line.startswith('## 🌟') or line.startswith('## 📖') or line.startswith('## 🚀'):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    doc.add_heading(line.replace('## ', ''), 3)
+                
+                elif line.startswith('### '):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    doc.add_heading(line.replace('### ', ''), 4)
+                
+                elif line.startswith('- ') or line.startswith('* '):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    bullet_text = line.replace('- ', '').replace('* ', '')
+                    if '**' in bullet_text:
+                        p = doc.add_paragraph(style='List Bullet')
+                        parts = bullet_text.split('**')
+                        for i, part in enumerate(parts):
+                            run = p.add_run(part)
+                            if i % 2 == 1:
+                                run.bold = True
+                    else:
+                        doc.add_paragraph(bullet_text, style='List Bullet')
+                
+                elif re.match(r'^\d+\. ', line):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    list_text = re.sub(r'^\d+\. ', '', line)
+                    if '**' in list_text:
+                        p = doc.add_paragraph(style='List Number')
+                        parts = list_text.split('**')
+                        for i, part in enumerate(parts):
+                            run = p.add_run(part)
+                            if i % 2 == 1:
+                                run.bold = True
+                    else:
+                        doc.add_paragraph(list_text, style='List Number')
+                
+                elif line.startswith('---') or line == '=' * len(line):
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    doc.add_paragraph('─' * 60)
+                
+                elif 'COMPLETED' in line.upper() and '===' in line:
+                    if current_paragraph:
+                        doc.add_paragraph(current_paragraph)
+                        current_paragraph = ""
+                    p = doc.add_paragraph(line)
+                    for run in p.runs:
+                        run.bold = True
+                        run.font.color.rgb = RGBColor(0, 128, 0)
+                
+                elif 'Halt for' in line and 'seconds' in line:
+                    continue  # Skip halt markers
+                    
+                else:
+                    if current_paragraph:
+                        current_paragraph += " " + line
+                    else:
+                        current_paragraph = line
+            
+            # Add any remaining paragraph
+            if current_paragraph:
+                if '**' in current_paragraph:
+                    p = doc.add_paragraph()
+                    parts = current_paragraph.split('**')
+                    for i, part in enumerate(parts):
+                        run = p.add_run(part)
+                        if i % 2 == 1:
+                            run.bold = True
+                else:
+                    doc.add_paragraph(current_paragraph)
+            
+            # Add spacing between weeks
+            doc.add_paragraph()
+            doc.add_paragraph('═' * 80)
+            doc.add_paragraph()
+    
+    # Save the combined document
+    filename = "Complete_Course_Material.docx"
+    filepath = os.path.join(output_dir, filename)
+    
+    try:
+        doc.save(filepath)
+        print(f"✅ Created combined DOCX: {filename}")
+        return filepath
+    except Exception as e:
+        print(f"❌ Error creating combined DOCX: {e}")
+        return None
+
+def create_combined_pdf_direct(planner_content, deep_content, output_dir):
+    """Create a combined PDF file directly using ReportLab"""
+    
+    filename = "Complete_Course_Material.pdf"
+    filepath = os.path.join(output_dir, filename)
+    
+    try:
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            filepath,
+            pagesize=A4,
+            rightMargin=1*inch,
+            leftMargin=1*inch,
+            topMargin=1*inch,
+            bottomMargin=1*inch
+        )
+        
+        # Create styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            textColor='blue'
+        )
+        
+        heading1_style = ParagraphStyle(
+            'CustomHeading1',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=20,
+            spaceBefore=20,
+            textColor='darkblue'
+        )
+        
+        heading2_style = ParagraphStyle(
+            'CustomHeading2',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=15,
+            spaceBefore=15,
+            textColor='darkblue'
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=8,
+            alignment=TA_JUSTIFY
+        )
+        
+        elements = []
+        
+        # Add title
+        elements.append(Paragraph("Complete Course Material", title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Process planner content
+        if planner_content:
+            elements.append(Paragraph("Course Plan & Structure", heading1_style))
+            elements.append(Spacer(1, 10))
+            
+            # Clean and format planner content
+            clean_content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', planner_content)
+            clean_content = re.sub(r'\*(.*?)\*', r'<i>\1</i>', clean_content)
+            
+            paragraphs = clean_content.split('\n\n')
+            for para in paragraphs:
+                para = para.strip()
+                if para:
+                    if para.startswith('###'):
+                        elements.append(Paragraph(para.replace('###', '').strip(), heading2_style))
+                    elif para.startswith('##'):
+                        elements.append(Paragraph(para.replace('##', '').strip(), heading1_style))
+                    else:
+                        # Clean up any remaining markdown
+                        para = re.sub(r'^\*\s+', '', para, flags=re.MULTILINE)
+                        try:
+                            elements.append(Paragraph(para, normal_style))
+                        except:
+                            # If formatting fails, use plain text
+                            clean_para = re.sub(r'<[^>]+>', '', para)
+                            elements.append(Paragraph(clean_para, normal_style))
+                    elements.append(Spacer(1, 6))
+            
+            elements.append(PageBreak())
+        
+        # Process deep content
+        if deep_content:
+            elements.append(Paragraph("Detailed Course Content", heading1_style))
+            elements.append(Spacer(1, 10))
+            
+            weeks = parse_weeks_from_content(deep_content)
+            
+            for week in weeks:
+                # Add week heading
+                elements.append(Paragraph(f"Week {week['number']}: Detailed Content", heading1_style))
+                elements.append(Spacer(1, 10))
+                
+                # Process week content
+                content = week['content']
+                # Clean up markdown formatting
+                content = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', content)
+                content = re.sub(r'\*(.*?)\*', r'<i>\1</i>', content)
+                
+                # Split into sections by headings
+                sections = re.split(r'\n## ', content)
+                
+                for section in sections:
+                    section = section.strip()
+                    if not section:
+                        continue
+                    
+                    lines = section.split('\n')
+                    if lines:
+                        # First line might be a heading
+                        first_line = lines[0].strip()
+                        if first_line and ('🔗' in first_line or '🔍' in first_line or '💡' in first_line or '📚' in first_line or '🌟' in first_line or '📖' in first_line or '🚀' in first_line):
+                            elements.append(Paragraph(first_line, heading2_style))
+                            content_lines = lines[1:]
+                        else:
+                            content_lines = lines
+                        
+                        # Process content
+                        paragraph_text = []
+                        for line in content_lines:
+                            line = line.strip()
+                            if line and not line.startswith('===') and 'Halt for' not in line:
+                                # Handle bullet points
+                                if line.startswith('- ') or line.startswith('* '):
+                                    if paragraph_text:
+                                        try:
+                                            elements.append(Paragraph(' '.join(paragraph_text), normal_style))
+                                        except:
+                                            clean_text = re.sub(r'<[^>]+>', '', ' '.join(paragraph_text))
+                                            elements.append(Paragraph(clean_text, normal_style))
+                                        paragraph_text = []
+                                    
+                                    bullet_text = line.replace('- ', '').replace('* ', '')
+                                    try:
+                                        elements.append(Paragraph(f"• {bullet_text}", normal_style))
+                                    except:
+                                        clean_bullet = re.sub(r'<[^>]+>', '', bullet_text)
+                                        elements.append(Paragraph(f"• {clean_bullet}", normal_style))
+                                else:
+                                    paragraph_text.append(line)
+                        
+                        if paragraph_text:
+                            try:
+                                elements.append(Paragraph(' '.join(paragraph_text), normal_style))
+                            except:
+                                clean_text = re.sub(r'<[^>]+>', '', ' '.join(paragraph_text))
+                                elements.append(Paragraph(clean_text, normal_style))
+                    
+                    elements.append(Spacer(1, 10))
+                
+                # Add separator between weeks
+                elements.append(Spacer(1, 20))
+        
+        # Build PDF
+        doc.build(elements)
+        print(f"✅ Created combined PDF: {filename}")
+        return filepath
+        
+    except Exception as e:
+        print(f"❌ Error creating combined PDF: {e}")
+        return None
+
+def create_course_material_combined():
+    """Main function to create combined DOCX and PDF files from text content"""
+    
+    print("📚 Starting Combined Course Material Creation...")
+    print("=" * 60)
+    
+    # Read content from text files
+    print("🔍 Reading course content files...")
+    planner_content, deep_content = read_course_content_files()
+    
+    if not planner_content and not deep_content:
+        print("❌ No course content found. Please ensure text files exist.")
+        return
+
+    # Create output directory under Inputs and Outputs
+    output_dir = os.path.join("Inputs and Outputs", "course material")
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"📁 Created output directory: {output_dir}")
+    
+    created_files = []
+    
+    # Create combined DOCX
+    print(f"\n📄 Creating combined DOCX file...")
+    docx_path = create_combined_docx(planner_content, deep_content, output_dir)
+    if docx_path:
+        created_files.append(docx_path)
+    
+    # Create combined PDF
+    print(f"\n📄 Creating combined PDF file...")
+    pdf_path = create_combined_pdf_direct(planner_content, deep_content, output_dir)
+    if pdf_path:
+        created_files.append(pdf_path)
+    
+    # Summary
+    print(f"\n{'=' * 60}")
+    print("📊 COMBINED COURSE MATERIAL SUMMARY")
+    print(f"{'=' * 60}")
+    
+    if created_files:
+        print(f"🎉 Successfully created {len(created_files)} files!")
+        print(f"\n📁 Files created in '{output_dir}' directory:")
+        for filepath in created_files:
+            print(f"   📄 {os.path.basename(filepath)}")
+        
+        print(f"\n💡 Combined documents include:")
+        print("   - Complete course plan and structure")
+        print("   - All weekly detailed content")
+        print("   - Proper formatting and organization")
+        print("   - Professional document layout")
+        
+    else:
+        print("❌ No combined documents were created successfully.")
+        
+    return created_files
+
 def main():
     """Run the course material creation process"""
     try:
-        # Check if required package is installed
+        # Check if required packages are installed
         try:
             import docx
+            from reportlab.platypus import SimpleDocTemplate
         except ImportError:
-            print("❌ python-docx package not found!")
-            print("📦 Installing python-docx...")
-            os.system("pip install python-docx")
+            print("❌ Required packages not found!")
+            print("📦 Installing required packages...")
+            os.system("pip install python-docx reportlab")
             import docx
-            
-        created_files = create_course_material_docx()
+            from reportlab.platypus import SimpleDocTemplate
+        
+        print("📚 Course Material Generator")
+        print("🎯 Creating combined DOCX and PDF files by default...")
+        print("=" * 60)
+        
+        # Create combined files by default
+        created_files = create_course_material_combined()
         
         if created_files:
-            print("\n✅ Course material creation completed successfully!")
-            print(f"📁 Check the 'course material' folder for {len(created_files)} DOCX files.")
+            print(f"\n🎉 Course material creation completed successfully!")
+            print(f"📁 Total files created: {len(created_files)}")
+            print(f"📁 Check the 'Inputs and Outputs/course material' folder for all files.")
+            
+            # Show file breakdown
+            docx_files = [f for f in created_files if f.endswith('.docx')]
+            pdf_files = [f for f in created_files if f.endswith('.pdf')]
+            
+            if docx_files:
+                print(f"📄 DOCX files: {len(docx_files)}")
+                for f in docx_files:
+                    print(f"   - {os.path.basename(f)}")
+            
+            if pdf_files:
+                print(f"📄 PDF files: {len(pdf_files)}")
+                for f in pdf_files:
+                    print(f"   - {os.path.basename(f)}")
         else:
             print("\n❌ Course material creation failed.")
             
     except Exception as e:
         print(f"❌ An error occurred: {e}")
         print("💡 Make sure you have the required packages installed:")
-        print("   pip install python-docx")
+        print("   pip install python-docx reportlab")
 
 if __name__ == "__main__":
     main()
